@@ -1,0 +1,46 @@
+// Datasource
+ datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+ }
+
+ // Generator
+ generator client {
+  provider = "prisma-client-js"
+ }
+
+ // Enums
+ enum Role {
+  TRADER
+  ADMIN
+ }
+
+ // Models
+ model User {
+  id           Int             @id @default(autoincrement())
+  email        String          @unique
+  passwordHash String
+  role         Role            @default(TRADER)
+  createdAt    DateTime        @default(now())
+  watchlist    WatchlistItem[]
+ }
+
+ model Stock {
+  id         Int             @id @default(autoincrement())
+  symbol     String          @unique
+  name       String?
+  marketType String          @default("REG")
+  createdAt  DateTime        @default(now())
+  watchers   WatchlistItem[]
+ }
+
+ model WatchlistItem {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  stock     Stock    @relation(fields: [stockId], references: [id])
+  stockId   Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, stockId])
+ }

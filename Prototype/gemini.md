@@ -57,3 +57,39 @@ TradeUp is a stock trading simulation platform designed to provide users with a 
 
 -   The application will be designed to mitigate common security risks, including those from the OWASP Top 10 list.
 -   Sensitive data will be encrypted both in transit and at rest.
+
+
+## Prototype phase 
+Prototype Use Cases: Phase—1
+ 
+Requirements
+Sr#
+Use Case Name
+1
+Sign up / Login (Trader)
+Login (Admin)
+2
+View Stock Market Overview (see performance of popular stocks, as a list)
+3
+View watchlisted stocks
+
+ 
+ 
+·  	Prototype Use Cases: Phase—2
+ 
+ 
+Requirements
+Sr#
+Use Case Name
+4
+View and interact with candlestick chart of a stock (see summary statistics in this view too)
+5
+Purchase a stock
+6
+Sell a stock
+7
+View portfolio of purchased stocks
+
+ 
+ 
+
