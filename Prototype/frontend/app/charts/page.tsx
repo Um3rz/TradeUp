@@ -4,6 +4,7 @@ import { io, Socket } from "socket.io-client";
 import { createChart, IChartApi, ISeriesApi } from 'lightweight-charts';
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import TopBar from "@/components/topbar"
 
 export default function charts() {
     const [tickData, setTickData] = useState<any>(null);
@@ -14,11 +15,24 @@ export default function charts() {
     const [currentCandle, setCurrentCandle] = useState<any>(null);
     const [stock, setStock] = useState<string>('HBL');
 
-    // 4 hours in milliseconds
-    const CANDLE_INTERVAL = 1 * 60 * 60 * 1000;
+    // 1 minute in milliseconds
+    const CANDLE_INTERVAL = 1 * 60 * 1000;
 
     const getCandleStartTime = (timestamp: number) => {
         return Math.floor(timestamp / CANDLE_INTERVAL) * CANDLE_INTERVAL;
+    };
+
+    const clearCandleHistory = () => {
+        if (confirm(`Are you sure you want to clear all candle history for ${stock}?`)) {
+            setCandleData([]);
+            setCurrentCandle(null);
+            try {
+                localStorage.removeItem(`candles_${stock}`);
+                console.log(`Cleared candle history for ${stock}`);
+            } catch (error) {
+                console.error('Failed to clear candles from localStorage:', error);
+            }
+        }
     };
 
     const initializeChart = () => {
@@ -98,47 +112,25 @@ export default function charts() {
         };
     };
 
-    const processTickData = (tickData: any) => {
-        // Extract price from tick data - adjust this based on your actual tick data structure
-        const tickTime = new Date().getTime(); // Use current time or tickData.timestamp if available
-        const tickPrice = tickData.price || tickData.last || tickData.close || Math.random() * 100 + 50; // Fallback for testing
-        
-        const candleStartTime = getCandleStartTime(tickTime);
-        
-        // Check if this tick belongs to current candle or new one
-        if (!currentCandle || currentCandle.time !== candleStartTime) {
-            // Start new candle
-            const newCandle = {
-                time: candleStartTime / 1000, // Lightweight charts expects seconds
-                open: tickPrice,
-                high: tickPrice,
-                low: tickPrice,
-                close: tickPrice,
-            };
-            
-            if (currentCandle) {
-                // Add completed candle to history
-                setCandleData(prev => [...prev, currentCandle]);
-            }
-            
-            setCurrentCandle(newCandle);
-        } else {
-            // Update current candle
-            setCurrentCandle((prev: any) => ({
-                ...prev,
-                high: Math.max(prev.high, tickPrice),
-                low: Math.min(prev.low, tickPrice),
-                close: tickPrice,
-            }));
-        }
-    };
-
     useEffect(() => {
         initializeChart();
         
         if (stock) { // Only connect if stock is selected
-            // Clear previous data when changing stocks
-            setCandleData([]);
+            // Load previous candles from localStorage when stock changes
+            try {
+                const storedCandles = localStorage.getItem(`candles_${stock}`);
+                if (storedCandles) {
+                    const parsed = JSON.parse(storedCandles);
+                    setCandleData(parsed);
+                    console.log(`Loaded ${parsed.length} previous candles for ${stock}`);
+                } else {
+                    setCandleData([]);
+                }
+            } catch (error) {
+                console.error('Failed to load candles from localStorage:', error);
+                setCandleData([]);
+            }
+            
             setCurrentCandle(null);
             setTickData(null);
             
@@ -147,7 +139,58 @@ export default function charts() {
             
             socket.on("tickUpdate", (data) => {
                 setTickData(data);
-                processTickData(data);
+                
+                // Process tick data inline to avoid closure issues
+                const tick = data.tick;
+                if (!tick) return;
+                
+                const tickTime = data.timestamp || new Date().getTime();
+                const candleStartTime = getCandleStartTime(tickTime);
+                const candleTimeInSeconds = candleStartTime / 1000;
+                
+                setCurrentCandle((prev: any) => {
+                    // Check if we need to start a new candle
+                    if (!prev || prev.time !== candleTimeInSeconds) {
+                        // Save the previous candle if it exists
+                        if (prev) {
+                            setCandleData(oldData => {
+                                // Check if this candle already exists in the data
+                                const exists = oldData.some(candle => candle.time === prev.time);
+                                if (exists) {
+                                    console.log('Candle already exists, skipping duplicate');
+                                    return oldData;
+                                }
+                                
+                                const updated = [...oldData, prev];
+                                // Save to localStorage
+                                try {
+                                    localStorage.setItem(`candles_${stock}`, JSON.stringify(updated));
+                                    console.log(`Saved candle at time ${prev.time}. Total: ${updated.length}`);
+                                } catch (error) {
+                                    console.error('Failed to save candles to localStorage:', error);
+                                }
+                                return updated;
+                            });
+                        }
+                        
+                        // Return new candle
+                        return {
+                            time: candleTimeInSeconds,
+                            open: tick.o,
+                            high: tick.h,
+                            low: tick.l,
+                            close: tick.c,
+                        };
+                    } else {
+                        // Update current candle
+                        return {
+                            ...prev,
+                            high: Math.max(prev.high, tick.h),
+                            low: Math.min(prev.low, tick.l),
+                            close: tick.c,
+                        };
+                    }
+                });
             });
             
             return () => {
@@ -159,29 +202,42 @@ export default function charts() {
         }
     }, [stock]);
 
-    // Update chart when candle data changes
+    // Update chart with all data (completed candles + current candle)
     useEffect(() => {
-        if (candlestickSeriesRef.current && candleData.length > 0) {
-            candlestickSeriesRef.current.setData(candleData);
+        if (candlestickSeriesRef.current) {
+            const allData = currentCandle 
+                ? [...candleData, currentCandle]
+                : candleData;
+            
+            if (allData.length > 0) {
+                // Sort data by time to ensure ascending order
+                const sortedData = [...allData].sort((a, b) => a.time - b.time);
+                
+                // Remove duplicates by keeping the last occurrence of each timestamp
+                const uniqueData = sortedData.reduce((acc: any[], candle) => {
+                    const existingIndex = acc.findIndex(c => c.time === candle.time);
+                    if (existingIndex >= 0) {
+                        acc[existingIndex] = candle; // Replace with newer data
+                    } else {
+                        acc.push(candle);
+                    }
+                    return acc;
+                }, []);
+                
+                candlestickSeriesRef.current.setData(uniqueData);
+            }
         }
-    }, [candleData]);
-
-    // Update chart when current candle changes
-    useEffect(() => {
-        if (candlestickSeriesRef.current && currentCandle) {
-            const allData = [...candleData, currentCandle];
-            candlestickSeriesRef.current.setData(allData);
-        }
-    }, [currentCandle, candleData]);
+    }, [candleData, currentCandle]);
 
     return (
-        <div className="min-h-screen bg-[#111418] p-6">
+        <div className="min-h-screen bg-[#111418]">
+            <TopBar/>
             <div className="mx-auto max-w-7xl">
                 <div className="mb-6 flex items-center">
                     <div><h1 className="text-3xl font-bold text-[#E4E6EB]">Live Trading Charts</h1>
-                    <p className="text-[#9BA1A6] mt-2">Real-time 1-hour candlestick chart for {stock || 'No Stock Selected'}</p>
+                    <p className="text-[#9BA1A6] mt-2">Real-time 1-minute candlestick chart for {stock || 'No Stock Selected'}</p>
                     </div>
-                    <div className="ml-10">
+                    <div className="ml-10 flex items-center gap-4">
                         <select 
                             value={stock} 
                             onChange={(e)=>setStock(e.target.value)} 
@@ -195,13 +251,19 @@ export default function charts() {
                             <option value="HUBC">HUBC</option>
                             <option value="FFC">FFC</option>
                         </select>
+                        <button
+                            onClick={clearCandleHistory}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        >
+                            Clear History
+                        </button>
                     </div>
                 </div>
                 
                 <Card className="overflow-hidden bg-[#1C1F24] border-[#2D3139]">
                     <CardContent className="p-6">
                         <div className="mb-4">
-                            <h2 className="text-xl font-semibold text-[#E4E6EB] mb-2">{stock || 'No Stock Selected'} - 1H Chart</h2>
+                            <h2 className="text-xl font-semibold text-[#E4E6EB] mb-2">{stock || 'No Stock Selected'} - 1M Chart</h2>
                             <div className="flex items-center gap-4 text-sm text-[#9BA1A6]">
                                 <span>Completed Candles: {candleData.length}</span>
                                 <span>•</span>
@@ -230,7 +292,7 @@ export default function charts() {
                                             <span className="text-green-400">{currentCandle.high?.toFixed(2)}</span>
                                             <span className="text-[#9BA1A6]">Low:</span>
                                             <span className="text-red-400">{currentCandle.low?.toFixed(2)}</span>
-                                            <span className="text-[#9BA1A6]">Close:</span>
+                                            <span className="text-[#9BA1A6]">Current Price:</span>
                                             <span className="text-[#E4E6EB]">{currentCandle.close?.toFixed(2)}</span>
                                         </div>
                                     </div>
