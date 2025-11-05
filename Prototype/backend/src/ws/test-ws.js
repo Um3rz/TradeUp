@@ -1,7 +1,7 @@
 //to test node Prototype/backend/src/ws/test-ws.js
 const { io } = require("socket.io-client");
 
-const socket = io("http://localhost:3000/ws", {
+const socket = io("http://localhost:3001/ws", {
   transports: ["websocket"],
   reconnectionAttempts: 5,
   timeout: 10000,
