@@ -14,6 +14,10 @@
   TRADER
   ADMIN
  }
+ enum Side {
+  BUY
+  SELL
+}
 
  // Models
  model User {
@@ -22,7 +26,13 @@
   passwordHash String
   role         Role            @default(TRADER)
   createdAt    DateTime        @default(now())
-  watchlist    WatchlistItem[]
+
+  balance  BigInt    @default(100000)
+
+  // Relations
+  watchlist     WatchlistItem[]
+  holdings      Holding[]
+  txns          Txn[]
  }
 
  model Stock {
@@ -32,6 +42,8 @@
   marketType String          @default("REG")
   createdAt  DateTime        @default(now())
   watchers   WatchlistItem[]
+  holdings   Holding[]
+  txns       Txn[]
  }
 
  model WatchlistItem {
@@ -44,3 +56,42 @@
 
   @@unique([userId, stockId])
  }
+
+// PORTFOLIO: one row per user+stock with whole-share quantity
+model Holding {
+  id        Int     @id @default(autoincrement())
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  stock     Stock   @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  stockId   Int
+
+  // Whole shares only
+  shares    Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, stockId])
+  @@index([userId])
+  @@index([stockId])
+}
+
+// LEDGER: append-only transaction history (execution price is per-share)
+//
+model Txn {
+  id           Int      @id @default(autoincrement())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       Int
+  stock        Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  stockId      Int
+
+  side         Side
+  shares       Int            // whole shares (positive)
+  priceCents   BigInt         // execution price per share (cents)
+  amountCents  BigInt         // optional: shares * priceCents (store for fast queries)
+
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([stockId, createdAt])
+}
