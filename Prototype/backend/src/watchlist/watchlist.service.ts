@@ -8,9 +8,7 @@ export class WatchlistService {
 
   private ensureFeatured(symbol: string) {
     if (!FEATURED_SYMBOLS.includes(symbol as any)) {
-      throw new BadRequestException(
-        'Only featured symbols are allowed in Phase 1',
-      );
+      throw new BadRequestException('Only featured symbols are allowed in Phase 1');
     }
   }
 

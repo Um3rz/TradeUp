@@ -13,11 +13,7 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async create(data: {
-    email: string;
-    passwordHash: string;
-    role?: 'TRADER' | 'ADMIN';
-  }) {
+  async create(data: { email: string; passwordHash: string; role?: 'TRADER' | 'ADMIN' }) {
     return this.prisma.user.create({ data });
   }
 }

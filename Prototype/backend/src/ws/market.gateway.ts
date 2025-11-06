@@ -1,11 +1,5 @@
 import { OnModuleInit } from '@nestjs/common';
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-  MessageBody,
-  ConnectedSocket,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import WebSocket from 'ws';
 import { FEATURED_SYMBOLS, PSX_WS_URL } from '../common/constants';
@@ -23,10 +17,7 @@ export class MarketGateway implements OnModuleInit {
 
   // Client asks to receive updates for a single symbol (must be in FEATURED_SYMBOLS for Phase 1)
   @SubscribeMessage('subscribeSymbol')
-  handleSubscribe(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() symbol: string,
-  ) {
+  handleSubscribe(@ConnectedSocket() socket: Socket, @MessageBody() symbol: string) {
     if (!FEATURED_SYMBOLS.includes(symbol as any)) {
       return;
     }
@@ -55,7 +46,6 @@ export class MarketGateway implements OnModuleInit {
         const msg = JSON.parse(String(data));
         if (msg?.type === 'tickUpdate' && msg?.symbol) {
           // emit only to clients subscribed to this symbol
-          console.log(msg)
           this.server.to(`symbol:${msg.symbol}`).emit('tickUpdate', msg);
         }
       } catch {}
