@@ -247,10 +247,9 @@ React.useEffect(() => {
     <main className="min-h-screen w-full bg-[#111418]">
       <TopBar/>
       <div className="mx-auto max-w-7xl">
-        <header className="mb-6 flex items-center justify-between">
+        <header className="mb-6 flex items-center justify-between mx-10">
           <div>
-            <h1 className="text-3xl font-semibold text-white mb-2">Dashboard</h1>
-            <p className="text-base text-[#9BA1A6]">Featured PSX stocks</p>
+            <h2 className="text-base text-[#9BA1A6] text-lg font-bold">Featured PSX stocks</h2>
           </div>
           <div className="flex items-center gap-3">
             {lastUpdated && (

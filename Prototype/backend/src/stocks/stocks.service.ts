@@ -52,6 +52,39 @@ export class StocksService {
     }
   }
 
+  async getPreviousDayClose(symbol: string): Promise<number | null> {
+    const klines = await this.getKlines(symbol, '1d', { limit: 2 });
+
+    if (!klines || klines.length === 0) {
+      return null;
+    }
+
+    // kline format: [time, open, high, low, close, volume]
+    // Assuming time is in seconds, and klines are sorted chronologically ascending.
+    const lastKline = klines[klines.length - 1];
+    const lastKlineTime = new Date(lastKline[0] * 1000);
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    if (lastKlineTime.getTime() >= today.getTime()) {
+      // The last kline is from today.
+      if (klines.length > 1) {
+        // The one before is from yesterday.
+        const yesterdayKline = klines[klines.length - 2];
+        return yesterdayKline[4]; // close price
+      } else {
+        // Only today's kline is available, no previous day's close.
+        return null;
+      }
+    } else {
+      // The last kline is from before today (e.g., yesterday).
+      // This happens on weekends or holidays.
+      // We'll use its close as the reference price.
+      return lastKline[4]; // close price
+    }
+  }
+
   async findOrCreateStock(symbol: string) {
     let stock = await this.prisma.stock.findUnique({
       where: { symbol },

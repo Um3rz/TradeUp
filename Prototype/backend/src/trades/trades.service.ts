@@ -166,4 +166,46 @@ export class TradesService {
       };
     });
   }
+  async getPortfolio(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found.`);
+    }
+
+    const portfolioItems = await this.prisma.portfolio.findMany({
+      where: { userId },
+      include: { stock: true },
+    });
+
+    const portfolioWithPnl = await Promise.all(
+      portfolioItems.map(async (item) => {
+        const tick = await this.stocks.getTick(item.stock.symbol);
+        const currentPrice = new Decimal(tick?.price || 0);
+
+        const previousDayClose = await this.stocks.getPreviousDayClose(
+          item.stock.symbol,
+        );
+
+        let pnl = new Decimal(0);
+        if (previousDayClose != null) {
+          const previousClosePrice = new Decimal(previousDayClose);
+          pnl = currentPrice.sub(previousClosePrice).mul(item.quantity);
+        }
+
+        return {
+          ...item,
+          currentPrice,
+          pnl,
+        };
+      }),
+    );
+
+    return {
+      balance: user.balance,
+      portfolio: portfolioWithPnl,
+    };
+  }
 }

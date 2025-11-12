@@ -28,7 +28,6 @@ export default function topBar() {
                     <a href="/portfolio">Portfolio</a>
                     <a href="/charts">Markets</a>
                     <a href="/buy">Trade</a>
-                    <a href="/dashboard">Watchlist</a>
                 </div>
                 <Avatar className="scale-130 cursor-pointer" onClick={() => setHidden('flex')}>
                     <AvatarImage src={img} className="scale-120 border border-[#23262b]" />

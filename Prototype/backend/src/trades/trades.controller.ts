@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards, Get } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { BuyStockDto } from './dto/buy-stock.dto';
 import { SellStockDto } from './dto/sell-stock.dto';
@@ -7,6 +7,13 @@ import { TradesService } from './trades.service';
 @Controller('trades')
 export class TradesController {
   constructor(private readonly tradesService: TradesService) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Get('portfolio')
+  getPortfolio(@Request() req) {
+    const userId = req.user.userId;
+    return this.tradesService.getPortfolio(userId);
+  }
 
   @UseGuards(JwtAuthGuard)
   @Post('buy')
