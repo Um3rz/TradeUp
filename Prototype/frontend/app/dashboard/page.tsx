@@ -264,6 +264,30 @@ React.useEffect(() => {
   }, [apiDelete, removing, watchlist]);
 
   // ---------- UI ----------
+  // --- UserContext refresh on mount ---
+  // This ensures TopBar gets updated user info after login
+  const { user, isLoading, refreshUser } = require('@/context/UserContext').useUser?.() || {};
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('access_token')) {
+      refreshUser?.();
+    }
+  }, []);
+
+  // Show loading skeleton until user is loaded
+  if (isLoading || !user) {
+    return (
+      <main className="min-h-screen w-full bg-[#111418] flex items-center justify-center">
+        <div className="w-full max-w-7xl mx-auto">
+          <table className="w-full text-sm">
+            <tbody>
+              <SkeletonRows columns={8} />
+            </tbody>
+          </table>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen w-full bg-[#111418]">
       <TopBar/>

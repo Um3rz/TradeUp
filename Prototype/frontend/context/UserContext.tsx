@@ -4,11 +4,13 @@ import { getUserProfile, User } from "@/lib/userService";
 
 interface UserContextType {
   user: User | null;
+  isLoading: boolean;
   refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
+  isLoading: true,
   refreshUser: async () => {},
 });
 
@@ -16,16 +18,19 @@ export const useUser = () => useContext(UserContext);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = async () => {
+    setIsLoading(true);
     const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
     if (!token) {
       setUser(null);
-      // Optionally, redirect to login or show a message here
+      setIsLoading(false);
       return;
     }
     const profile = await getUserProfile();
     setUser(profile);
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -33,7 +38,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, refreshUser }}>
+    <UserContext.Provider value={{ user, isLoading, refreshUser }}>
       {children}
     </UserContext.Provider>
   );

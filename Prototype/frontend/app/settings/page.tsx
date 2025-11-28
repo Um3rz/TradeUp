@@ -19,7 +19,7 @@ export default function Settings() {
 
     const { register, handleSubmit, setValue, formState: { errors } } = useForm<AuthFormFields>();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { user, refreshUser } = useUser();
+    const { user, isLoading, refreshUser } = useUser();
     const handleButtonClick = () => {
         if (fileInputRef.current) {
             fileInputRef.current.click();
@@ -83,7 +83,13 @@ export default function Settings() {
         }
     }, [user, setValue]);
 
-    if (!user) {
+    useEffect(() => {
+        if (!isLoading && user === null) {
+            router.push("/");
+        }
+    }, [isLoading, user, router]);
+
+    if (isLoading || user === null) {
         return (
             <div className='min-h-screen bg-[#111418] flex items-center justify-center'>
                 <span className='text-white text-xl'>Loading...</span>
