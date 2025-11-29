@@ -123,10 +123,6 @@ html, body {
   }
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(circle at 15% 50%, oklch(55.1% 0.15 264 / 30%), oklch(0% 0 0 / 0%) 30%),
-      radial-gradient(circle at 85% 30%, oklch(48.8% 0.243 264.376 / 25%), oklch(0% 0 0 / 0%) 40%),
-      url("/6256878.jpg");
-    background-size: cover;
-    background-position: center;
+    /* No global background image, set per-page if needed */
   }
 }

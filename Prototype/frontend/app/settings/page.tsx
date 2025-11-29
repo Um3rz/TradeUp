@@ -8,8 +8,8 @@ import { useRouter } from 'next/navigation';
 import { uploadProfileImage, getUserProfile, User, updateUserName, updateUserEmail, updateUserPassword } from "@/lib/userService";
 import { useUser } from "@/context/UserContext";
 
-export default function Settings() {
 
+export default function Settings() {
     type AuthFormFields = {
         name: string;
         email: string;
@@ -19,7 +19,29 @@ export default function Settings() {
 
     const { register, handleSubmit, setValue, formState: { errors } } = useForm<AuthFormFields>();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { user, isLoading, checkedAuth, refreshUser } = useUser();
+    const { user, isLoading, refreshUser } = useUser();
+    const router = useRouter();
+
+    // Session check state
+    const [sessionChecked, setSessionChecked] = useState(false);
+
+    useEffect(() => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+        if (!token) {
+            router.replace("/"); // Redirect to login immediately
+        } else {
+            setSessionChecked(true);
+        }
+    }, [router]);
+
+    // Only show loading spinner until user is loaded
+    useEffect(() => {
+        if (user) {
+            setValue('name', user.name || '');
+            setValue('email', user.email || '');
+        }
+    }, [user, setValue]);
+
     const handleButtonClick = () => {
         if (fileInputRef.current) {
             fileInputRef.current.click();
@@ -28,34 +50,23 @@ export default function Settings() {
 
     async function changeData(data: AuthFormFields) {
         try {
-            // Validate that current password is provided if any changes are being made
             if (!data.confirm && (data.name !== user?.name || data.email !== user?.email || data.password)) {
                 return;
             }
-
-            // Update name if changed
             if (data.name && data.name !== user?.name) {
                 await updateUserName(data.name, data.confirm);
             }
-
-            // Update email if changed
             if (data.email && data.email !== user?.email) {
                 await updateUserEmail(data.email, data.confirm);
             }
-
-            // Update password if new password is provided
             if (data.password) {
                 await updateUserPassword(data.confirm, data.password);
             }
-
-            // Refresh user profile everywhere
             await refreshUser();
-            // Update form values with new profile data
             setValue('name', user?.name || '');
             setValue('email', user?.email || '');
             setValue('password', '');
             setValue('confirm', '');
-
         } catch (error: unknown) {
             console.error('Failed to update profile:', error);
         }
@@ -66,36 +77,15 @@ export default function Settings() {
         if (file) {
             try {
                 await uploadProfileImage(file);
-                await refreshUser(); // Update user everywhere (topbar, etc)
+                await refreshUser();
             } catch (error) {
                 console.error('Failed to upload profile image:', error);
             }
         }
     };
 
-    const router = useRouter();
-    // Remove local loading state, use user context
-
-    useEffect(() => {
-        if (user) {
-            setValue('name', user.name || '');
-            setValue('email', user.email || '');
-        }
-    }, [user, setValue]);
-
-    const [redirecting, setRedirecting] = useState(false);
-    useEffect(() => {
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        if (checkedAuth && !isLoading && !token) {
-            setRedirecting(true);
-            router.push("/");
-        }
-    }, [checkedAuth, isLoading, user, router]);
-
-    if (redirecting) {
-        return null;
-    }
-    if (!checkedAuth || isLoading) {
+    // Only render spinner until session is checked and user is loaded
+    if (!sessionChecked || isLoading || !user) {
         return (
             <div className='min-h-screen bg-[#111418] flex items-center justify-center'>
                 <span className='text-white text-xl'>Loading...</span>

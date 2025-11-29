@@ -41,7 +41,20 @@ export class UsersService {
       where: { id },
       select: { profileImageUrl: true },
     });
-    return user?.profileImageUrl || null;
+    if (!user?.profileImageUrl) return null;
+    // Extract file path from stored public URL
+    // Example: https://<project>.supabase.co/storage/v1/object/public/TradeUp-profile-images/123/avatar.png
+    // We need: 123/avatar.png
+    const url = user.profileImageUrl;
+    const match = url.match(/TradeUp-profile-images\/(.+)$/);
+    const filePath = match ? match[1] : null;
+    if (!filePath) return null;
+    // Generate signed URL (valid for 1 hour)
+    const { data, error } = await supabase.storage
+      .from('TradeUp-profile-images')
+      .createSignedUrl(filePath, 3600);
+    if (error || !data?.signedUrl) return null;
+    return data.signedUrl;
   }
 
   async findByEmail(email: string) {
