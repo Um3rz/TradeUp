@@ -2,6 +2,7 @@ import { Body, Controller, Put, Request, UseGuards, Get, Post, UseInterceptors, 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { UsersService } from './users.service';
+import { FundWalletDto } from './dto/fund-wallet.dto';
 import * as bcrypt from 'bcrypt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
@@ -197,14 +198,15 @@ export class UsersController {
     };
   }
 
+  //! Add Funds
   @UseGuards(JwtAuthGuard)
-  @Put('fund-wallet')
+  @Post('fund-wallet')
   async fundWallet(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { amount: number },
+    @Body() fundWalletDto: FundWalletDto,
   ) {
     const userId = req.user.userId;
-    const { amount } = body;
+    const { amount } = fundWalletDto;
 
     // Mask userId in logs
     console.log(

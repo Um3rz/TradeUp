@@ -79,7 +79,6 @@ export default function DashboardPage() {
   const [showWalletPopup, setShowWalletPopup] = useState<boolean>(false);
 
   const { user, isLoading, refreshUser } = useUser() || {};
-
   const tokenRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     tokenRef.current =
@@ -185,9 +184,10 @@ export default function DashboardPage() {
 }, [apiGet, normalizeStock]);
 
 React.useEffect(() => {
-  if (user?.balance === -1) { // Default balance check
+  if (user?.balance == -1) { // Default balance check
     setShowWalletPopup(true);
   }
+  console.log("WalletPopup: ", showWalletPopup);
 }, [user]); // This will run when the user object changes
 
 React.useEffect(() => {
@@ -285,20 +285,52 @@ React.useEffect(() => {
     }
   }, []);
 
+  // Adds Funds on Signup. 
   const handleFundWallet = async (amount: number) => {
-    try {
-      await apiPost('/users/fund-wallet', { amount });
-      await refreshUser(); // Refresh user data to update balance
-      setShowWalletPopup(false);
-    } catch (error) {
-      console.error('Error funding wallet:', error);
+  try {
+    // First, check if user exists
+    if (!user) {
+      console.error('No user logged in');
+      return;
     }
-  };
+    // First, store the current balance for reference
+    const oldBalance = user?.balance;
+    console.log('Old balance:', oldBalance);
+    
+    // Make the API call to update the balance
+    const response = await apiPost('/users/fund-wallet', { amount });
+    console.log('API Response:', response); // Log the full response if needed
+    
+    // Refresh user data to get the updated balance
+    const updatedUser = await refreshUser();
+    console.log('Updated balance:', updatedUser?.balance);
+    
+    setShowWalletPopup(false);
+  } catch (error) {
+    console.error('Error funding wallet:', error);
+  }
+};
   // Show loading skeleton until user is loaded
   if (isLoading || !user) {
     return (
       <main className="min-h-screen w-full bg-[#111418] flex items-center justify-center">
-        {showWalletPopup && (
+        <div className="w-full max-w-7xl mx-auto">
+          <table className="w-full text-sm">
+            <tbody>
+              <SkeletonRows columns={8} />
+            </tbody>
+          </table>
+        </div>
+      </main>
+      
+    );
+  }
+
+  // Page
+  return (
+    <main className="min-h-screen w-full bg-[#111418]">
+      {/* Wallet Popup */}
+      {showWalletPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg">
             <h2>Fund Your Wallet</h2>
@@ -322,20 +354,7 @@ React.useEffect(() => {
           </div>
         </div>
       )}
-        <div className="w-full max-w-7xl mx-auto">
-          <table className="w-full text-sm">
-            <tbody>
-              <SkeletonRows columns={8} />
-            </tbody>
-          </table>
-        </div>
-      </main>
-      
-    );
-  }
 
-  return (
-    <main className="min-h-screen w-full bg-[#111418]">
       <TopBar/>
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 flex items-center justify-between mx-10">

@@ -40,16 +40,29 @@ export class UsersService {
     return data.publicUrl;
   }
 
+  //! Add Funds
   // Update user's wallet balance
   async updateBalance({ userId, amount }: UpdateBalanceDto) {
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        balance: {
-          increment: amount
+    
+    //if balance is -1, increment by amount + 1
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user && user.balance.toNumber() === -1) {
+      return this.prisma.user.update({
+        where: { id: userId },
+        data: { balance: { increment: amount + 1 } },
+      });
+    }
+    //else increment by amount
+    else {
+      return this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          balance: {
+            increment: amount
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   // Fetch profile picture public URL from Neon DB

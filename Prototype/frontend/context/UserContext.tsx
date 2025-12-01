@@ -7,7 +7,7 @@ import { getUserProfile, User } from "@/lib/userService";
 interface UserContextType {
   user: User | null;
   isLoading: boolean;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 
@@ -15,7 +15,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType>({
   user: null,
   isLoading: true,
-  refreshUser: async () => {},
+  refreshUser: async () => null,
 });
 
 
@@ -25,13 +25,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshUser = async () => {
+  const refreshUser = async (): Promise<User | null> => {
     setIsLoading(true);
+    let fetchedProfile: User | null = null;
     try {
-      const profile = await getUserProfile();
-      setUser(profile);
+      fetchedProfile = await getUserProfile();
+      setUser(fetchedProfile);
+      return fetchedProfile;
     } catch {
       setUser(null);
+      return null;
     } finally {
       setIsLoading(false);
     }
