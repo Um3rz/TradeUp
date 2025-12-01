@@ -51,7 +51,7 @@ export function AuthForm() {
     try {
       const url = mode === "signin" ? "/auth/login" : "/auth/signup";
       const body: { email: string; password: string; role?: string } = { email: data.email, password: data.password };
-      if (mode === "signup") body.role = "USER";
+      if (mode === "signup") body.role = "TRADER";
 
       const res = await fetch(`${API_BASE}${url}`, {
         method: "POST",
