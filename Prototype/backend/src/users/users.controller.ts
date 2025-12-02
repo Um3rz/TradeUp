@@ -1,10 +1,12 @@
 import { Body, Controller, Put, Request, UseGuards, Get, Post, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { UsersService } from './users.service';
 import * as bcrypt from 'bcrypt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
+
 
 interface AuthenticatedRequest {
   user: {
@@ -14,13 +16,19 @@ interface AuthenticatedRequest {
   };
 }
 
+type UploadedFileType = {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+};
+
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
   @UseGuards(JwtAuthGuard)
   @Post('profile-picture')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadProfilePicture(@Request() req: any, @UploadedFile() file: any) {
+  async uploadProfilePicture(@Request() req: AuthenticatedRequest, @UploadedFile() file: UploadedFileType) {
     if (!file) {
       this.logger.error('No file uploaded');
       throw new UnauthorizedException('No file uploaded');
@@ -38,7 +46,7 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile-picture')
-  async getProfilePicture(@Request() req: any) {
+  async getProfilePicture(@Request() req: AuthenticatedRequest) {
     // Use userId from auth middleware
     const imageUrl = await this.usersService.getProfilePictureUrl(req.user.userId);
     return { imageUrl };
