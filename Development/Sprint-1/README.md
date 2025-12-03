@@ -28,8 +28,8 @@ LIST OF REQUIREMENTS COMPLETED IN THE SPRINT
 1. Muhammad Rayyan Khan: Update User Info, Update profile picture, Stock news page
 2. Muhammad Ahmad: Stock news page
 3. Muhammad Umar Zubair: Ai stock simulation
-4. Mohammad Raiyaan Junaid Hamid: User PnL, Virtual Currency Topup
-5. Muhammad Shamir Sher Qazi: Ai stock simulation
+4. Mohammad Raiyaan Junaid Hamid: Virtual Currency Topup
+5. Muhammad Shamir Sher Qazi: User PnL
 
 
 ------------------------------------------------------------------------------------------------
