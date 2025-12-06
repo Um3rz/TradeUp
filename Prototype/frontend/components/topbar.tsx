@@ -20,6 +20,7 @@ export default function TopBar() {
                     <a href="/charts">Markets</a>
                     <a href="/buy">Trade</a>
                     <a href="/news">News</a>
+                    <a href="/help">Help</a>
                 </div>
                 <Avatar className="scale-130 cursor-pointer" onClick={() => setHidden('flex')}>
                     {user?.profileImageUrl
