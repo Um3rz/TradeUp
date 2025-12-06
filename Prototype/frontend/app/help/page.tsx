@@ -9,16 +9,27 @@ interface FAQItem {
   category: string;
 }
 
+const createLinkText = (text: string, href: string, linkText: string) => 
+  `${text} <a href='${href}' class='text-blue-400 hover:text-blue-300 underline'>${linkText}</a>.`;
+
 const FAQ_DATA: FAQItem[] = [
   {
     category: "Trading",
     question: "How do I buy stocks?",
-    answer: "Navigate to the 'Buy' page, search for a stock ticker (e.g., AAPL), enter the number of shares you want to purchase, and click 'Buy'. Make sure you have sufficient balance in your account. You can access the buy page directly here: <a href='/buy' class='text-blue-400 hover:text-blue-300 underline'>Buy Stocks</a>."
+    answer: createLinkText(
+      "Navigate to the 'Buy' page, search for a stock ticker (e.g., AAPL), enter the number of shares you want to purchase, and click 'Buy'. Make sure you have sufficient balance in your account. You can access the buy page directly here:",
+      "/buy",
+      "Buy Stocks"
+    )
   },
   {
     category: "Trading",
     question: "How do I sell stocks?",
-    answer: "Go to your 'Portfolio' page, find the stock you want to sell, click on it, and select 'Sell'. Choose how many shares to sell and confirm the transaction. Access your portfolio here: <a href='/portfolio' class='text-blue-400 hover:text-blue-300 underline'>My Portfolio</a>."
+    answer: createLinkText(
+      "Go to your 'Portfolio' page, find the stock you want to sell, click on it, and select 'Sell'. Choose how many shares to sell and confirm the transaction. Access your portfolio here:",
+      "/portfolio", 
+      "My Portfolio"
+    )
   },
   {
     category: "Trading",
@@ -26,18 +37,22 @@ const FAQ_DATA: FAQItem[] = [
     answer: "Yes, trades are executed using real-time market data. However, since this is a simulation, you're not actually buying real stocks - just practicing with virtual money."
   },
   {
-    category: "Trading",
+    category: "Trading", 
     question: "What types of orders can I place?",
     answer: "Currently, TradeUp supports market orders, which execute immediately at the current market price. Additional order types may be added in future updates."
   },
   {
     category: "Portfolio & Watchlist",
     question: "How do I view my portfolio?",
-    answer: "Click on 'Portfolio' in the navigation menu to see all your current holdings, their current values, profit/loss, and overall portfolio performance. <a href='/portfolio' class='text-blue-400 hover:text-blue-300 underline'>Go to Portfolio</a>."
+    answer: createLinkText(
+      "Click on 'Portfolio' in the navigation menu to see all your current holdings, their current values, profit/loss, and overall portfolio performance.",
+      "/portfolio",
+      "Go to Portfolio"
+    )
   },
   {
     category: "Portfolio & Watchlist",
-    question: "What is a watchlist and how do I use it?",
+    question: "What is a watchlist and how do I use it?", 
     answer: "A watchlist lets you track stocks you're interested in without buying them. Add stocks to your watchlist to monitor their prices and performance over time."
   },
   {
@@ -48,7 +63,11 @@ const FAQ_DATA: FAQItem[] = [
   {
     category: "Charts & Data",
     question: "How do I view stock charts?",
-    answer: "Go to the 'Charts' page and search for any stock ticker. You'll see interactive charts with price history, volume data, and technical indicators. <a href='/charts' class='text-blue-400 hover:text-blue-300 underline'>View Charts</a>."
+    answer: createLinkText(
+      "Go to the 'Charts' page and search for any stock ticker. You'll see interactive charts with price history, volume data, and technical indicators.",
+      "/charts",
+      "View Charts"
+    )
   },
   {
     category: "Charts & Data",
@@ -56,14 +75,18 @@ const FAQ_DATA: FAQItem[] = [
     answer: "Charts support multiple timeframes including 1 day, 5 days, 1 month, 6 months, 1 year, and 5 years to help you analyze both short-term and long-term trends."
   },
   {
-    category: "Charts & Data",
+    category: "Charts & Data", 
     question: "Where does the market data come from?",
     answer: "TradeUp uses real-time market data from reliable financial data providers to ensure accurate pricing and chart information."
   },
   {
     category: "News & Research",
     question: "How do I access market news?",
-    answer: "Visit the 'News' page to see the latest financial news. You can also search for news specific to any stock ticker you're interested in. <a href='/news' class='text-blue-400 hover:text-blue-300 underline'>Read News</a>."
+    answer: createLinkText(
+      "Visit the 'News' page to see the latest financial news. You can also search for news specific to any stock ticker you're interested in.",
+      "/news",
+      "Read News"
+    )
   },
   {
     category: "News & Research",
@@ -73,7 +96,11 @@ const FAQ_DATA: FAQItem[] = [
   {
     category: "Account & Settings",
     question: "How do I update my profile information?",
-    answer: "Go to 'Settings' in your account menu to update your name, email, profile picture, and other account preferences. <a href='/settings' class='text-blue-400 hover:text-blue-300 underline'>Access Settings</a>."
+    answer: createLinkText(
+      "Go to 'Settings' in your account menu to update your name, email, profile picture, and other account preferences.",
+      "/settings",
+      "Access Settings"
+    )
   },
   {
     category: "Account & Settings",
@@ -91,7 +118,7 @@ const FAQ_DATA: FAQItem[] = [
     answer: "Absolutely! TradeUp is designed as a learning platform where beginners can practice trading with virtual money before risking real capital in actual markets."
   },
   {
-    category: "General Questions",
+    category: "General Questions", 
     question: "Do I need any trading experience to use TradeUp?",
     answer: "No prior experience is required. TradeUp is perfect for learning the basics of stock trading, portfolio management, and market analysis in a risk-free environment."
   },
