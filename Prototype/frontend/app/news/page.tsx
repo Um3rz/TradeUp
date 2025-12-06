@@ -4,13 +4,9 @@ import TopBar from '@/components/topbar';
 import Image from 'next/image';
 import { fetchLatestNews, fetchStockNews } from '@/lib/newsService';
 import { NewsArticle, StockNewsArticle } from '@/types/news';
-
-
-
-
+import { useUser } from "@/context/UserContext";
 
 export default function NewsPage() {
-  const router = useRouter();
   const { user, isLoading: userLoading } = useUser();
   
   const [generalArticles, setGeneralArticles] = useState<NewsArticle[]>([]);
