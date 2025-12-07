@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState } from "react";
 import { useUser } from '@/context/UserContext';
@@ -10,16 +11,16 @@ import { Button } from '@/components/ui/button';
  * Dashboard — PSX stocks list + Watchlist (add/remove)
  *
  * Shows:
- *  - Your Watchlist (authenticated) — with Remove action
- *  - Featured stocks — with Save to watchlist
- *  - Auto-refresh Featured every 10s
+ *  - Your Watchlist (authenticated) — with Remove action
+ *  - Featured stocks — with Save to watchlist
+ *  - Auto-refresh Featured every 10s
  *
  * Endpoints assumed (tweak paths if yours differ):
- *  - GET  /stocks/featured                 -> Array<{ symbol, name?, marketType, tick }>
- *  - GET  /stocks/:symbol                  -> { symbol, name?, marketType, tick }
- *  - GET  /watchlist                       -> { symbols: string[] } OR Array<{ symbol: string }>
- *  - POST /watchlist       body: {symbol}  -> 200/201
- *  - DELETE /watchlist/:symbol             -> 200/204
+ *  - GET  /stocks/featured                 -> Array<{ symbol, name?, marketType, tick }>
+ *  - GET  /stocks/:symbol                  -> { symbol, name?, marketType, tick }
+ *  - GET  /watchlist                       -> { symbols: string[] } OR Array<{ symbol: string }>
+ *  - POST /watchlist       body: {symbol}  -> 200/201
+ *  - DELETE /watchlist/:symbol             -> 200/204
  */
 
 interface Tick {
@@ -83,13 +84,14 @@ export default function DashboardPage() {
 
   const { user, isLoading, refreshUser } = useUser() || {};
   const tokenRef = React.useRef<string | null>(null);
+
+  // Load token from localStorage once on mount
   React.useEffect(() => {
     tokenRef.current =
       (typeof window !== "undefined" && localStorage.getItem("access_token")) || null;
   }, []);
 
-
-// API GET
+  // API GET
   const apiGet = React.useCallback(async (path: string): Promise<unknown> => {
     const res = await fetch(`${API_BASE}${path}`, {
       cache: "no-store",
@@ -100,7 +102,7 @@ export default function DashboardPage() {
     return json;
   }, [API_BASE]);
 
-// API POST
+  // API POST
   const apiPost = React.useCallback(async (path: string, body: Record<string, unknown>): Promise<unknown> => {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
@@ -114,29 +116,27 @@ export default function DashboardPage() {
     if (!res.ok) throw new Error((json as { message?: string; error?: string })?.message || (json as { message?: string; error?: string })?.error || "Request failed");
     return json;
   }, [API_BASE]);
-// API DELETE
+
+  // API DELETE
   const apiDelete = React.useCallback(async (path: string): Promise<unknown> => {
     const res = await fetch(`${API_BASE}${path}`, {
       method: "DELETE",
       headers: tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {},
     });
-    // Some APIs return no JSON on 204; be tolerant:
     let json: Record<string, unknown> = {};
-    try { json = await res.json(); } catch {}
+    try { json = await res.json(); } catch { }
     if (!res.ok) throw new Error(json?.message as string || json?.error as string || "Request failed");
     return json;
   }, [API_BASE]);
 
-// Normalize stock data
   const normalizeStock = React.useCallback((json: ApiStockResponse, fallbackSymbol?: string): StockData => {
-  const stock = json?.stock ?? json ?? {};
-  return {
-    symbol: stock.symbol ?? fallbackSymbol ?? "—",
-    name: stock.name ?? null,
-    marketType: stock.marketType ?? "REG",
-    // tick could be at json.tick, json.stock.tick, or json.currentTick
-    tick: json?.tick ?? stock?.tick ?? json?.currentTick ?? null,
-  };
+    const stock = json?.stock ?? json ?? {};
+    return {
+      symbol: stock.symbol ?? fallbackSymbol ?? "—",
+      name: stock.name ?? null,
+      marketType: stock.marketType ?? "REG",
+      tick: json?.tick ?? stock?.tick ?? json?.currentTick ?? null,
+    };
   }, []);
 
   // ---------- Loaders ----------
@@ -154,106 +154,106 @@ export default function DashboardPage() {
   }, [apiGet]);
 
   const fetchWatchlist = React.useCallback(async () => {
-  if (!tokenRef.current) {
-    setWatchlist(new Set());
-    setWatchlistRows([]);
-    return;
-  }
-  try {
-    const json = await apiGet("/watchlist");
-    let symbols: string[] = [];
-    if (Array.isArray(json)) symbols = (json as WatchlistItem[]).map((x) => x?.symbol).filter(Boolean);
-    else if (Array.isArray((json as WatchlistResponse)?.symbols)) symbols = ((json as WatchlistResponse).symbols || []).filter((s) => typeof s === "string");
+    if (!tokenRef.current) {
+      setWatchlist(new Set());
+      setWatchlistRows([]);
+      return;
+    }
+    try {
+      const json = await apiGet("/watchlist");
+      let symbols: string[] = [];
+      if (Array.isArray(json)) symbols = (json as WatchlistItem[]).map((x) => x?.symbol).filter(Boolean);
+      else if (Array.isArray((json as WatchlistResponse)?.symbols)) symbols = ((json as WatchlistResponse).symbols || []).filter((s) => typeof s === "string");
 
-    setWatchlist(new Set(symbols));
+      setWatchlist(new Set(symbols));
 
-    // Hydrate rows into the same shape as featured
-    const rows = await Promise.all(
-      symbols.map(async (sym) => {
-        try {
-          const raw = await apiGet(`/stocks/${encodeURIComponent(sym)}`);
-          return normalizeStock(raw as ApiStockResponse, sym);
-        } catch {
-          // still keep a minimal row if detail fetch fails
-          return { symbol: sym, name: null, marketType: "REG", tick: null };
-        }
-      })
-    );
-    setWatchlistRows(rows);
-  } catch {
-    setWatchlist(new Set());
-    setWatchlistRows([]);
-  }
-}, [apiGet, normalizeStock]);
+      // Hydrate rows into the same shape as featured
+      const rows = await Promise.all(
+        symbols.map(async (sym) => {
+          try {
+            const raw = await apiGet(`/stocks/${encodeURIComponent(sym)}`);
+            return normalizeStock(raw as ApiStockResponse, sym);
+          } catch {
+            // still keep a minimal row if detail fetch fails
+            return { symbol: sym, name: null, marketType: "REG", tick: null };
+          }
+        })
+      );
+      setWatchlistRows(rows);
+    } catch {
+      setWatchlist(new Set());
+      setWatchlistRows([]);
+    }
+  }, [apiGet, normalizeStock]);
 
-React.useEffect(() => {
-  if (user?.balance == -1) { // Default balance check
-    setShowWalletPopup(true);
-  }
-  console.log("WalletPopup: ", showWalletPopup);
-}, [user, showWalletPopup]); // This will run when the user object changes
+  React.useEffect(() => {
+    if (user?.balance == -1) { // Default balance check
+      setShowWalletPopup(true);
+    }
+    console.log("WalletPopup: ", showWalletPopup);
+  }, [user, showWalletPopup]); // This will run when the user object changes
 
-React.useEffect(() => {
-  fetchFeatured();
-  fetchWatchlist();
+  React.useEffect(() => {
+    fetchFeatured();
+    fetchWatchlist();
 
-  // Refresh featured often; watchlist a bit less to reduce load.
-  const idFeatured = setInterval(fetchFeatured, 10_000);
-  const idWatch = setInterval(() => {
-    if (tokenRef.current) fetchWatchlist();
-  }, 30_000);
+    // Refresh featured often; watchlist a bit less to reduce load.
+    const idFeatured = setInterval(fetchFeatured, 10_000);
+    const idWatch = setInterval(() => {
+      if (tokenRef.current) fetchWatchlist();
+    }, 30_000);
 
-  // Optional: pause when tab is hidden
-  const onVis = () => {
-    if (document.hidden) {
+    // Optional: pause when tab is hidden
+    const onVis = () => {
+      if (document.hidden) {
+        clearInterval(idFeatured);
+        clearInterval(idWatch);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
       clearInterval(idFeatured);
       clearInterval(idWatch);
-    }
-  };
-  document.addEventListener("visibilitychange", onVis);
-
-  return () => {
-    clearInterval(idFeatured);
-    clearInterval(idWatch);
-    document.removeEventListener("visibilitychange", onVis);
-  };
-}, [fetchFeatured, fetchWatchlist]);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [fetchFeatured, fetchWatchlist]);
 
   const saveSymbol = React.useCallback(async (symbol: string) => {
-  if (!tokenRef.current) {
-    alert("Please sign in to use your watchlist.");
-    return;
-  }
-  if (saving.has(symbol) || watchlist.has(symbol)) return;
-
-  const nextSaving = new Set(saving);
-  nextSaving.add(symbol);
-  setSaving(nextSaving);
-
-  try {
-    await apiPost("/watchlist", { symbol });
-
-    // Immediately fetch the fully-detailed row and prepend it
-    let normalized: StockData = { symbol, name: null, marketType: "REG", tick: null };
-    try {
-      const raw = await apiGet(`/stocks/${encodeURIComponent(symbol)}`);
-      normalized = normalizeStock(raw as ApiStockResponse, symbol);
-    } catch {
-      // ignore; keep minimal fallback
+    if (!tokenRef.current) {
+      alert("Please sign in to use your watchlist.");
+      return;
     }
+    if (saving.has(symbol) || watchlist.has(symbol)) return;
 
-    const next = new Set(watchlist);
-    next.add(symbol);
-    setWatchlist(next);
-    setWatchlistRows((prev) => [normalized, ...prev]);
-  } catch (e: unknown) {
-    alert((e as Error)?.message || "Could not save to watchlist.");
-  } finally {
-    const s2 = new Set(nextSaving);
-    s2.delete(symbol);
-    setSaving(s2);
-  }
-}, [apiGet, apiPost, normalizeStock, saving, watchlist]);
+    const nextSaving = new Set(saving);
+    nextSaving.add(symbol);
+    setSaving(nextSaving);
+
+    try {
+      await apiPost("/watchlist", { symbol });
+
+      // Immediately fetch the fully-detailed row and prepend it
+      let normalized: StockData = { symbol, name: null, marketType: "REG", tick: null };
+      try {
+        const raw = await apiGet(`/stocks/${encodeURIComponent(symbol)}`);
+        normalized = normalizeStock(raw as ApiStockResponse, symbol);
+      } catch {
+        // ignore; keep minimal fallback
+      }
+
+      const next = new Set(watchlist);
+      next.add(symbol);
+      setWatchlist(next);
+      setWatchlistRows((prev) => [normalized, ...prev]);
+    } catch (e: unknown) {
+      alert((e as Error)?.message || "Could not save to watchlist.");
+    } finally {
+      const s2 = new Set(nextSaving);
+      s2.delete(symbol);
+      setSaving(s2);
+    }
+  }, [apiGet, apiPost, normalizeStock, saving, watchlist]);
 
   const removeSymbol = React.useCallback(async (symbol: string) => {
     if (!tokenRef.current) return;
@@ -281,7 +281,6 @@ React.useEffect(() => {
   // ---------- UI -----------
   // --- UserContext refresh on mount ---
   // This ensures TopBar gets updated user info after login
-  // const { user, isLoading, refreshUser } = require('@/context/UserContext').useUser?.() || {};
   React.useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('access_token')) {
       refreshUser?.();
@@ -290,31 +289,33 @@ React.useEffect(() => {
 
   // Adds Funds on Signup. 
   const handleFundWallet = async (amount: number) => {
-  try {
-    // First, check if user exists
-    if (!user) {
-      console.error('No user logged in');
-      return;
+    try {
+      // First, check if user exists
+      if (!user) {
+        console.error('No user logged in');
+        return;
+      }
+      // First, store the current balance for reference
+      const oldBalance = user?.balance;
+      console.log('Old balance:', oldBalance);
+
+      // Make the API call to update the balance
+      const response = await apiPost('/users/fund-wallet', { amount });
+      console.log('API Response:', response); // Log the full response if needed
+
+      // Refresh user data to get the updated balance
+      const updatedUser = await refreshUser();
+      console.log('Updated balance:', updatedUser?.balance);
+
+      setShowWalletPopup(false);
+    } catch (error) {
+      console.error('Error funding wallet:', error);
     }
-    // First, store the current balance for reference
-    const oldBalance = user?.balance;
-    console.log('Old balance:', oldBalance);
-    
-    // Make the API call to update the balance
-    const response = await apiPost('/users/fund-wallet', { amount });
-    console.log('API Response:', response); // Log the full response if needed
-    
-    // Refresh user data to get the updated balance
-    const updatedUser = await refreshUser();
-    console.log('Updated balance:', updatedUser?.balance);
-    
-    setShowWalletPopup(false);
-  } catch (error) {
-    console.error('Error funding wallet:', error);
-  }
-};
-  // Show loading skeleton until user is loaded
-  if (isLoading || !user) {
+  };
+
+  // MODIFIED: Show loading skeleton only while data is being loaded by useUser hook (isLoading is true).
+  // This allows unauthenticated users (!user is true) to see the main page content.
+  if (isLoading) {
     return (
       <main className="min-h-screen w-full bg-[#111418] flex items-center justify-center">
         <div className="w-full max-w-7xl mx-auto">
@@ -325,7 +326,7 @@ React.useEffect(() => {
           </table>
         </div>
       </main>
-      
+
     );
   }
 
@@ -368,7 +369,7 @@ React.useEffect(() => {
         </div>
       )}
 
-      <TopBar/>
+      <TopBar />
       <div className="mx-auto max-w-7xl">
         <header className="mb-6 flex items-center justify-between mx-10">
           <div>
@@ -443,11 +444,10 @@ React.useEffect(() => {
                             <button
                               onClick={() => removeSymbol(s)}
                               disabled={isRemoving}
-                              className={`inline-flex items-center gap-1 rounded-xl px-2 py-1 text-xs ring-1 transition ${
-                                isRemoving
+                              className={`inline-flex items-center gap-1 rounded-xl px-2 py-1 text-xs ring-1 transition ${isRemoving
                                   ? "bg-neutral-100 text-neutral-400 ring-black/5 cursor-not-allowed"
                                   : "bg-white hover:bg-neutral-50 ring-black/10 text-neutral-800 shadow"
-                              }`}
+                                }`}
                               title="Remove from watchlist"
                             >
                               {isRemoving ? <Spinner16 /> : <Minus16 />}
@@ -525,11 +525,10 @@ React.useEffect(() => {
                             <button
                               onClick={() => saveSymbol(s)}
                               disabled={!canSave}
-                              className={`inline-flex items-center gap-1 rounded-xl px-2 py-1 text-xs ring-1 transition ${
-                                canSave
+                              className={`inline-flex items-center gap-1 rounded-xl px-2 py-1 text-xs ring-1 transition ${canSave
                                   ? "bg-white hover:bg-neutral-50 ring-black/10 text-neutral-800 shadow"
                                   : "bg-neutral-100 text-neutral-400 ring-black/5 cursor-not-allowed"
-                              }`}
+                                }`}
                               title={tokenRef.current ? "Save to watchlist" : "Sign in to save"}
                             >
                               {isSaving ? <Spinner16 /> : <Plus16 />}
