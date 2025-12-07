@@ -41,7 +41,7 @@ export class StocksService {
   async listFeaturedWithTicks() {
     const symbols = this.getFeaturedSymbols();
     const results = await Promise.all(
-      symbols.map(async (s) => ({ symbol: s, tick: await this.getTick(s) }))
+      symbols.map(async (s) => ({ symbol: s, tick: await this.getTick(s) })),
     );
     return results;
   }

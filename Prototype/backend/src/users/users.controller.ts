@@ -1,4 +1,14 @@
-import { Body, Controller, Put, Request, UseGuards, Get, Post, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Put,
+  Request,
+  UseGuards,
+  Get,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { Express } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -9,7 +19,6 @@ import { FundWalletDto } from './dto/fund-wallet.dto';
 import * as bcrypt from 'bcrypt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
-
 
 interface AuthenticatedRequest {
   user: {
@@ -31,14 +40,22 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Post('profile-picture')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadProfilePicture(@Request() req: AuthenticatedRequest, @UploadedFile() file: UploadedFileType) {
+  async uploadProfilePicture(
+    @Request() req: AuthenticatedRequest,
+    @UploadedFile() file: UploadedFileType,
+  ) {
     if (!file) {
       this.logger.error('No file uploaded');
       throw new UnauthorizedException('No file uploaded');
     }
     try {
       // Pass file.mimetype to service for correct contentType
-      const imageUrl = await this.usersService.uploadProfilePicture(req.user.userId, file.buffer, file.originalname, file.mimetype);
+      const imageUrl = await this.usersService.uploadProfilePicture(
+        req.user.userId,
+        file.buffer,
+        file.originalname,
+        file.mimetype,
+      );
       this.logger.debug(`Image uploaded successfully. URL: ${imageUrl}`);
       return { imageUrl };
     } catch (error) {
@@ -51,7 +68,9 @@ export class UsersController {
   @Get('profile-picture')
   async getProfilePicture(@Request() req: AuthenticatedRequest) {
     // Use userId from auth middleware
-    const imageUrl = await this.usersService.getProfilePictureUrl(req.user.userId);
+    const imageUrl = await this.usersService.getProfilePictureUrl(
+      req.user.userId,
+    );
     return { imageUrl };
   }
   constructor(private readonly usersService: UsersService) {}
@@ -233,5 +252,4 @@ export class UsersController {
 
     return this.usersService.updateBalance({ userId, amount });
   }
-  
 }

@@ -181,7 +181,7 @@ export default function HelpPage() {
             <div className="mt-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg border border-blue-500 p-6">
               <h3 className="text-xl font-bold mb-2">Still need help?</h3>
               <p className="text-blue-100 mb-4">
-                Can't find what you're looking for? Our support team is here to help.
+                Can&apos;t find what you&apos;re looking for? Our support team is here to help.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button className="bg-white text-blue-600 font-semibold px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors">

@@ -8,7 +8,7 @@ type UpdateBalanceDto = {
 };
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 @Injectable()
@@ -16,12 +16,20 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Upload profile picture, save URL in DB, and return public URL
-  async uploadProfilePicture(id: number, fileBuffer: Buffer, fileName: string, contentType?: string): Promise<string> {
+  async uploadProfilePicture(
+    id: number,
+    fileBuffer: Buffer,
+    fileName: string,
+    contentType?: string,
+  ): Promise<string> {
     const filePath = `${id}/${fileName}`;
-  let finalContentType = contentType || 'image/png';
+    const finalContentType = contentType || 'image/png';
     const { error } = await supabase.storage
       .from('TradeUp-profile-images')
-      .upload(filePath, fileBuffer, { upsert: true, contentType: finalContentType });
+      .upload(filePath, fileBuffer, {
+        upsert: true,
+        contentType: finalContentType,
+      });
 
     if (error) {
       throw new Error(error.message);
@@ -43,7 +51,6 @@ export class UsersService {
   //! Add Funds
   // Update user's wallet balance
   async updateBalance({ userId, amount }: UpdateBalanceDto) {
-    
     //if balance is -1, increment by amount + 1
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (user && user.balance.toNumber() === -1) {
@@ -58,9 +65,9 @@ export class UsersService {
         where: { id: userId },
         data: {
           balance: {
-            increment: amount
-          }
-        }
+            increment: amount,
+          },
+        },
       });
     }
   }
@@ -82,7 +89,11 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async create(data: { email: string; passwordHash: string; role?: 'TRADER' | 'ADMIN' }) {
+  async create(data: {
+    email: string;
+    passwordHash: string;
+    role?: 'TRADER' | 'ADMIN';
+  }) {
     return this.prisma.user.create({ data });
   }
 

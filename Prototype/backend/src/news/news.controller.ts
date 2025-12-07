@@ -56,21 +56,27 @@ export class NewsController {
   async getLatestNews(): Promise<LatestNewsArticle[]> {
     const apiKey = process.env.NEWS_API_KEY;
     const url = `https://financialmodelingprep.com/stable/fmp-articles?limit=10&apikey=${apiKey}`;
-    const response = await firstValueFrom(this.httpService.get<LatestNewsArticle[]>(url));
+    const response = await firstValueFrom(
+      this.httpService.get<LatestNewsArticle[]>(url),
+    );
     return response.data;
   }
 
   @Post('stock')
-  async getStockNews(@Body() body: { ticker: string }): Promise<StockNewsArticle[]> {
+  async getStockNews(
+    @Body() body: { ticker: string },
+  ): Promise<StockNewsArticle[]> {
     const apiKey = process.env.STOCK_API_KEY;
     const ticker = body?.ticker;
-    
+
     if (!ticker) {
       return [];
     }
-    
+
     const url = `https://api.marketaux.com/v1/news/all?symbols=${ticker}&limit=3&api_token=${apiKey}`;
-    const response = await firstValueFrom(this.httpService.get<{ data: StockNewsArticle[] }>(url));
+    const response = await firstValueFrom(
+      this.httpService.get<{ data: StockNewsArticle[] }>(url),
+    );
     return response.data.data;
   }
 }

@@ -27,7 +27,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = async (): Promise<User | null> => {
     setIsLoading(true);
-    let fetchedProfile: User | null = null;
     try {
       const profile = await getUserProfile();
         // Fetch signed profile image URL
@@ -48,7 +47,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } catch {}
-        setUser({ ...profile, profileImageUrl: signedUrl || profile.profileImageUrl });
+        const updatedUser = { ...profile, profileImageUrl: signedUrl || profile.profileImageUrl };
+        setUser(updatedUser);
+        return updatedUser;
     } catch {
       setUser(null);
       return null;

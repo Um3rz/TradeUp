@@ -40,11 +40,7 @@ export class TradesController {
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     const userId = req.user.userId;
-    return this.tradesService.getTransactions(
-      userId,
-      limit || 50,
-      offset || 0,
-    );
+    return this.tradesService.getTransactions(userId, limit || 50, offset || 0);
   }
 
   @UseGuards(JwtAuthGuard)
