@@ -21,7 +21,7 @@ interface TickUpdateMessage {
   cors: {
     origin: [
       'http://localhost:3000',
-      'https://p04-trade-up.vercel.app/',
+      'https://p04-trade-up.vercel.app',
     ],
     credentials: true,
     methods: ['GET', 'POST'],

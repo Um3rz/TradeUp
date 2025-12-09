@@ -9,7 +9,7 @@ async function bootstrap() {
   // Define allowed origins
   const allowedOrigins = [
     'http://localhost:3000',
-    'https://p04-trade-up.vercel.app/', 
+    'https://p04-trade-up.vercel.app', 
   ];
 
   app.enableCors({
