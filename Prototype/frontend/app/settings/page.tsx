@@ -41,7 +41,7 @@ export default function Settings() {
             setValue('name', user.name || '');
             setValue('email', user.email || '');
         }
-    }, [user, setValue]);
+    }, [user?.id, user?.name, user?.email, setValue]); // Only run when specific user properties change
 
     const handleButtonClick = () => {
         if (fileInputRef.current) {

@@ -2,22 +2,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { getUserProfile, User } from "@/lib/userService";
 
-
-
 interface UserContextType {
   user: User | null;
   isLoading: boolean;
   refreshUser: () => Promise<User | null>;
 }
 
-
-
 const UserContext = createContext<UserContextType>({
   user: null,
   isLoading: true,
   refreshUser: async () => null,
 });
-
 
 export const useUser = () => useContext(UserContext);
 
@@ -34,7 +29,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const token = localStorage.getItem('access_token');
           if (token) {
-            const res = await fetch('http://localhost:3001/users/profile-picture', {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+            const res = await fetch(`${API_BASE_URL}/users/profile-picture`, {
               method: 'GET',
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -46,11 +42,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               signedUrl = data.imageUrl || null;
             }
           }
-        } catch {}
+        } catch (e) {
+          console.error('Error fetching profile picture:', e);
+        }
+        // Only update user if profileImageUrl actually changed to avoid unnecessary re-renders
         const updatedUser = { ...profile, profileImageUrl: signedUrl || profile.profileImageUrl };
         setUser(updatedUser);
         return updatedUser;
-    } catch {
+    } catch (e) {
+      console.error('Error in refreshUser:', e);
       setUser(null);
       return null;
     } finally {
@@ -64,9 +64,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const interval = setInterval(() => {
       refreshUser();
     }, 3300000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
-
   return (
     <UserContext.Provider value={{ user, isLoading, refreshUser }}>
       {children}

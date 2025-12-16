@@ -15,15 +15,18 @@ export const uploadProfileImage = async (file: File): Promise<string> => {
   if (!token) {
     throw new Error('No authentication token found');
   }
+  console.log('Uploading profile image');
   const formData = new FormData();
   formData.append('file', file);
-  const response = await fetch('http://localhost:3001/users/profile-picture', {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const response = await fetch(`${API_BASE_URL}/users/profile-picture`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
     },
     body: formData,
   });
+
   if (!response.ok) {
     throw new Error('Failed to upload profile image');
   }
@@ -38,7 +41,8 @@ export const getUserProfile = async (): Promise<User> => {
     throw new Error('No authentication token found');
   }
 
-  const response = await fetch('http://localhost:3001/users/profile', {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const response = await fetch(`${API_BASE_URL}/users/profile`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -65,7 +69,9 @@ export const updateUserEmail = async (newEmail: string, currentPassword: string)
     throw new Error('No authentication token found');
   }
 
-  const response = await fetch('http://localhost:3001/users/email', {
+  console.log('Updating user email');
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const response = await fetch(`${API_BASE_URL}/users/email`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -89,7 +95,9 @@ export const updateUserPassword = async (currentPassword: string, newPassword: s
     throw new Error('No authentication token found');
   }
 
-  const response = await fetch('http://localhost:3001/users/password', {
+  console.log('Updating user password');
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const response = await fetch(`${API_BASE_URL}/users/password`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -113,7 +121,9 @@ export const updateUserName = async (newName: string, currentPassword: string) =
     throw new Error('No authentication token found');
   }
 
-  const response = await fetch('http://localhost:3001/users/name', {
+  console.log('Updating user name');
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  const response = await fetch(`${API_BASE_URL}/users/name`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,

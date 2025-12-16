@@ -50,7 +50,9 @@ export default function Portfolio() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/trades/portfolio', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_BASE_URL}/trades/portfolio`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -88,7 +90,9 @@ export default function Portfolio() {
 
     const token = localStorage.getItem('access_token');
     try {
-      const response = await fetch('http://localhost:3001/trades/sell', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_BASE_URL}/trades/sell`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

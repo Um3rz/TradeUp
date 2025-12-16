@@ -190,8 +190,7 @@ export default function DashboardPage() {
     if (user?.balance == -1) { // Default balance check
       setShowWalletPopup(true);
     }
-    console.log("WalletPopup: ", showWalletPopup);
-  }, [user, showWalletPopup]); // This will run when the user object changes
+  }, [user?.balance]); // Only run when balance changes, not entire user object
 
   React.useEffect(() => {
     fetchFeatured();
@@ -285,7 +284,7 @@ export default function DashboardPage() {
     if (typeof window !== 'undefined' && localStorage.getItem('access_token')) {
       refreshUser?.();
     }
-  }, [refreshUser]);
+  }, []); // Empty dependency array to prevent infinite loop
 
   // Adds Funds on Signup. 
   const handleFundWallet = async (amount: number) => {
