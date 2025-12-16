@@ -268,9 +268,9 @@ export function AuthForm() {
             <div>
               <Label>Role</Label>
               <div className="flex gap-2 mt-1">
-                {/* @ts-expect-error Component expects a literal type for 'value' prop. */}
+                {/* @ts-expect-error - RoleChip props type issue */}
                 <RoleChip value="TRADER" current={role} onPick={setRole} />
-                {/* @ts-expect-error Component expects a literal type for 'value' prop. */}
+                {/* @ts-expect-error - RoleChip props type issue */}
                 <RoleChip value="ADMIN" current={role} onPick={setRole} />
               </div>
             </div>

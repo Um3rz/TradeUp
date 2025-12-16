@@ -30,7 +30,8 @@ export default function Settings() {
         if (!token) {
             router.replace("/"); // Redirect to login immediately
         } else {
-            Promise.resolve().then(() => setSessionChecked(true));
+            // Use setTimeout to defer state update to avoid synchronous setState in effect
+            setTimeout(() => setSessionChecked(true), 0);
         }
     }, [router]);
 
