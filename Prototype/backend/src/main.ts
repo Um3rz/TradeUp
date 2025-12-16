@@ -7,7 +7,6 @@ import { CorsExceptionFilter } from './common/cors.exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-<<<<<<< HEAD
   
   // Configure CORS to allow both development and production origins
   app.enableCors({
@@ -33,22 +32,6 @@ async function bootstrap() {
     'https://p04-trade-up1.vercel.app'
   ]);
   
-=======
-
-  // Define allowed origins
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'https://p04-trade-up.vercel.app', 
-  ];
-
-  app.enableCors({
-    origin: allowedOrigins,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true, // Required for cookies/authorization headers
-    allowedHeaders: 'Content-Type, Accept, Authorization',
-  });
-
->>>>>>> 628b917f7cef3fbceefa4a642393f7368c7b7ac9
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new CorsExceptionFilter());
   await app.listen(process.env.PORT ? Number(process.env.PORT) : 3001);
