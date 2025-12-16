@@ -3,11 +3,8 @@
 ## Overview
 This document summarizes the key changes and additions to the TradeUp project since the original README.md was created.
 
-## Phase 2 Implementation Status: COMPLETE ✓
-
-### Major New Features Implemented
-
-## 1. Trading System (Fully Implemented)
+Deployment:https://p04-trade-up.vercel.app/
+## 1. Trading System 
 
 ### Backend Additions
 - **New Module**: `src/trades/`
