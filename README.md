@@ -1,8 +1,7 @@
 # TradeUp Project 
 
 ## Overview
-This document summarizes the key changes and additions to the TradeUp project since the original README.md was created.
-
+This is a public fork of my project at LUMS - An AI Trading Simulation game
 Deployment:https://p04-trade-up.vercel.app/
 ## 1. Trading System 
 <img width="2816" height="1536" alt="Gemini_Generated_Image_l6si8wl6si8wl6si" src="https://github.com/user-attachments/assets/918f4da8-4ae8-4943-9ecb-d358e7857638" />
