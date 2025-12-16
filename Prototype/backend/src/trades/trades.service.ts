@@ -168,11 +168,14 @@ export class TradesService {
     });
   }
   async getPortfolio(userId: number) {
+    console.log('getPortfolio called with userId:', userId);
+    
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) {
+      console.log('User not found:', userId);
       throw new NotFoundException(`User with ID ${userId} not found.`);
     }
 

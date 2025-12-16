@@ -80,9 +80,8 @@ const CategoryButton = ({ category, isActive, onClick }: {
   </button>
 );
 
-const FAQItemComponent = ({ faq, index, isExpanded, onToggle }: {
+const FAQItemComponent = ({ faq, isExpanded, onToggle }: {
   faq: FAQItem;
-  index: number;
   isExpanded: boolean;
   onToggle: () => void;
 }) => (
@@ -169,7 +168,6 @@ export default function HelpPage() {
                   <FAQItemComponent
                     key={`${activeCategory}-${index}`}
                     faq={faq}
-                    index={index}
                     isExpanded={expandedItems.has(index)}
                     onToggle={() => toggleExpanded(index)}
                   />

@@ -27,8 +27,9 @@ export class TradesController {
 
   @UseGuards(JwtAuthGuard)
   @Get('portfolio')
-  getPortfolio(@Request() req: AuthenticatedRequest) {
+  async getPortfolio(@Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
+    console.log('Portfolio endpoint called with userId:', userId);
     return this.tradesService.getPortfolio(userId);
   }
 

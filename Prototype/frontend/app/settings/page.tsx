@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { useRouter } from 'next/navigation';
-import { uploadProfileImage, getUserProfile, User, updateUserName, updateUserEmail, updateUserPassword } from "@/lib/userService";
+import { uploadProfileImage, updateUserName, updateUserEmail, updateUserPassword } from "@/lib/userService";
 import { useUser } from "@/context/UserContext";
 
 
@@ -41,7 +41,7 @@ export default function Settings() {
             setValue('name', user.name || '');
             setValue('email', user.email || '');
         }
-    }, [user, setValue]);
+    }, [user?.id, user?.name, user?.email, setValue]); // Only run when specific user properties change
 
     const handleButtonClick = () => {
         if (fileInputRef.current) {

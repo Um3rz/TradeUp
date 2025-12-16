@@ -65,6 +65,13 @@ export class MarketGateway implements OnModuleInit {
       }
     });
 
+<<<<<<< HEAD
+    ws.on('message', (data: Buffer) => {
+      try {
+        const msg: TickUpdateMessage = JSON.parse(
+          data.toString('utf-8'),
+        ) as TickUpdateMessage;
+=======
     // Fix: Type 'data' as unknown and safely narrow types instead of using 'any'
     ws.on('message', (data: unknown) => {
       try {
@@ -84,6 +91,7 @@ export class MarketGateway implements OnModuleInit {
 
         const msg = JSON.parse(rawMessage) as TickUpdateMessage;
 
+>>>>>>> 628b917f7cef3fbceefa4a642393f7368c7b7ac9
         if (msg?.type === 'tickUpdate' && msg?.symbol) {
           console.log(msg);
           this.server.to(`symbol:${msg.symbol}`).emit('tickUpdate', msg);

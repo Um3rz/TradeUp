@@ -1,9 +1,8 @@
 'use client'
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation";
-import { getUserProfile, User } from "@/lib/userService";
 import { useUser } from "@/context/UserContext";
 
 export default function TopBar() {
