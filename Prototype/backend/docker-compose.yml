@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tradeup-db
+    environment:
+      POSTGRES_USER: tradeup
+      POSTGRES_PASSWORD: tradeup
+      POSTGRES_DB: tradeup
+    ports:
+      - "5432:5432"
+    volumes:
+      - tradeup_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tradeup -d tradeup"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    container_name: tradeup-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://tradeup:tradeup@db:5432/tradeup?schema=public
+      JWT_SECRET: J2wtsecxret
+      PSX_API_BASE: https://psxterminal.com
+      # Supabase (for profile image storage)
+      SUPABASE_URL: https://prhkliftqgzbnofocshy.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaGtsaWZ0cWd6Ym5vZm9jc2h5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDM0ODk5NiwiZXhwIjoyMDc5OTI0OTk2fQ.45qzI9-EwKZOL9BwDGhGYIZQvfLy0NKS_4Kx6jU_lUU
+      # News APIs
+      NEWS_API_KEY: EBqVj2NM0RvmMOdf8l1FEw3aI4keyF8n
+      STOCK_API_KEY: FjJNWgz1yzC9t4BypoM7PZO3jyZCYIVY203V7OpM
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    # For development: mount source for hot reload (optional)
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+
+volumes:
+  tradeup_db:

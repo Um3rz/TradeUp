@@ -1,8 +1,16 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
-import TopBar from '@/components/topbar';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/context/UserContext';
+
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { X, TrendingUp, TrendingDown } from "lucide-react";
+import { AppShell } from "@/components/layout";
+import { PageHeader } from "@/components/common";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { http, ApiException } from "@/lib/http";
+import { formatDecimal, getPnLClass } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface Tick {
   price: number;
@@ -17,10 +25,6 @@ interface StockData {
 }
 
 export default function BuyPage() {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
-  const router = useRouter();
-  const { user, isLoading: userLoading } = useUser();
-  
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [showBuyPanel, setShowBuyPanel] = useState<boolean>(false);
@@ -30,40 +34,19 @@ export default function BuyPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Session check
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-    if (!token) {
-      router.replace("/");
-    }
-  }, [router]);
-
   const fetchAllStocks = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`${API_BASE}/stocks/featured`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch stocks');
-      }
-
-      const data = await response.json();
-
+      const data = await http.get<StockData[]>("/stocks/featured");
       setStocks(data);
     } catch (err) {
-      setError('Failed to load stocks');
-      console.error('Error fetching stocks:', err);
+      const message = err instanceof ApiException ? err.message : "Failed to load stocks";
+      setError(message);
     } finally {
       setLoading(false);
     }
-  }, [API_BASE]);
+  }, []);
 
   useEffect(() => {
     fetchAllStocks();
@@ -91,43 +74,26 @@ export default function BuyPage() {
 
   const handleBuySubmit = async (): Promise<void> => {
     if (!selectedStock || quantity <= 0 || isSubmitting) {
-        return;
+      return;
     }
 
     try {
-        setIsSubmitting(true);
-        
-        const response = await fetch(`${API_BASE}/trades/buy`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            symbol: selectedStock.symbol,
-            quantity: quantity,
-        }),
-        });
-
-        if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to place buy order');
-        }
-
-        const result = await response.json();
-        console.log('Buy order successful:', result);
-        
-        alert(`Successfully bought ${quantity} shares of ${selectedStock.symbol}!`);
-        
-        closeBuyPanel();
+      setIsSubmitting(true);
+      
+      await http.post("/trades/buy", {
+        symbol: selectedStock.symbol,
+        quantity: quantity,
+      });
+      
+      toast.success(`Successfully bought ${quantity} shares of ${selectedStock.symbol}!`);
+      closeBuyPanel();
     } catch (err) {
-        console.error('Error processing buy order:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to place buy order. Please try again.';
-        alert(errorMessage);
+      const message = err instanceof ApiException ? err.message : "Failed to place buy order. Please try again.";
+      toast.error(message);
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
-    };
+  };
 
   const closeBuyPanel = (): void => {
     setShowBuyPanel(false);
@@ -136,136 +102,153 @@ export default function BuyPage() {
     setTotalPrice(0);
   };
 
-  if (userLoading || !user || loading) {
-    return (
-      <div className='min-h-screen bg-[#0F1419] flex items-center justify-center'>
-        <span className='text-white text-xl'>Loading...</span>
-      </div>
-    );
-  }
-
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0F1419] text-white">
-        <TopBar />
-        <div className="flex justify-center items-center h-96">
-          <div className="text-xl text-red-500">{error}</div>
+      <AppShell>
+        <div className="flex flex-col justify-center items-center h-96 gap-4">
+          <p className="text-xl text-destructive">{error}</p>
+          <Button onClick={fetchAllStocks}>Try Again</Button>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0F1419] text-white">
-      <TopBar />
-      
-      <div className="flex h-[calc(100vh-80px)]">
+    <AppShell fullWidth>
+      <div className="max-w-7xl mx-auto px-6">
+        <PageHeader 
+          title="Trade" 
+          description="Buy stocks from the Pakistan Stock Exchange"
+        />
+      </div>
+
+      <div className="flex h-[calc(100vh-200px)]">
         {/* Left Side - Stock List (70%) */}
         <div className="w-[70%] p-6 overflow-y-auto">
-          <h1 className="text-3xl font-bold mb-6">Available Stocks</h1>
+          <h2 className="text-xl font-semibold mb-4">Available Stocks</h2>
           
-          <div className="grid gap-4">
-            {stocks.map((stock) => {
-            const price = getPrice(stock.tick);
-            const { change, changePercent } = getChange(stock.tick);
-            
-            return (
-                <div
-                key={stock.symbol}
-                onClick={() => handleStockSelect(stock)}
-                className="bg-[#181B20] border border-[#23262b] rounded-lg p-4 cursor-pointer hover:bg-[#1f2329] transition-colors"
-                >
-                <div className="flex justify-between items-center">
-                    <div>
-                    <h3 className="text-xl font-semibold">{stock.symbol}</h3>
-                    <p className="text-gray-400">{stock.name || stock.symbol}</p>
-                    </div>
-                    <div className="text-right">
-                    <p className="text-2xl font-bold">PKR {price.toFixed(2)}</p>
-                    <p className={`text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {change >= 0 ? '+' : ''}{change.toFixed(2)} ({changePercent.toFixed(2)}%)
-                    </p>
-                    </div>
-                </div>
-                </div>
-            );
-            })}
-          </div>
+          {loading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {stocks.map((stock) => {
+                const price = getPrice(stock.tick);
+                const { change, changePercent } = getChange(stock.tick);
+                const isPositive = change >= 0;
+
+                return (
+                  <Card
+                    key={stock.symbol}
+                    onClick={() => handleStockSelect(stock)}
+                    className="cursor-pointer transition-colors hover:bg-accent/50"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="text-xl font-semibold">{stock.symbol}</h3>
+                          <p className="text-muted-foreground">{stock.name || stock.symbol}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold">PKR {formatDecimal(price)}</p>
+                          <p className={cn("text-sm flex items-center justify-end gap-1", getPnLClass(change))}>
+                            {isPositive ? (
+                              <TrendingUp className="h-4 w-4" />
+                            ) : (
+                              <TrendingDown className="h-4 w-4" />
+                            )}
+                            {change >= 0 ? "+" : ""}{formatDecimal(change)} ({formatDecimal(changePercent)}%)
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right Side - Buy Panel (30%) */}
         <div 
-        className={`w-[30%] bg-[#181B20] border-l border-[#23262b] transition-transform duration-300 ease-in-out h-full ${
-            showBuyPanel ? 'transform translate-x-0' : 'transform translate-x-full'
-        }`}
+          className={cn(
+            "w-[30%] bg-card border-l border-border transition-transform duration-300 ease-in-out h-full",
+            showBuyPanel ? "transform translate-x-0" : "transform translate-x-full"
+          )}
         >
           {selectedStock && (
-            <div className="p-6 w-full max-h-full flex flex-col justify-center">
+            <div className="p-6 w-full max-h-full flex flex-col">
               {/* Close Button */}
               <div className="flex justify-end mb-4">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={closeBuyPanel}
-                  className="text-gray-400 hover:text-white text-2xl"
                 >
-                  ×
-                </button>
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
 
               {/* Stock Details */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">{selectedStock.symbol}</h2>
-                <p className="text-gray-400 mb-4">{selectedStock.name}</p>
-                <div className="bg-[#0F1419] rounded-lg p-4">
-                <p className="text-lg">Current Price</p>
-                <p className="text-3xl font-bold">PKR {getPrice(selectedStock.tick).toFixed(2)}</p>
-                <p className={`text-sm ${getChange(selectedStock.tick).change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {getChange(selectedStock.tick).change >= 0 ? '+' : ''}{getChange(selectedStock.tick).change.toFixed(2)} ({getChange(selectedStock.tick).changePercent.toFixed(2)}%)
-                </p>
-                </div>
+                <p className="text-muted-foreground mb-4">{selectedStock.name}</p>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Current Price</p>
+                    <p className="text-3xl font-bold">PKR {formatDecimal(getPrice(selectedStock.tick))}</p>
+                    <p className={cn("text-sm", getPnLClass(getChange(selectedStock.tick).change))}>
+                      {getChange(selectedStock.tick).change >= 0 ? "+" : ""}
+                      {formatDecimal(getChange(selectedStock.tick).change)} 
+                      ({formatDecimal(getChange(selectedStock.tick).changePercent)}%)
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Quantity Input */}
               <div className="mb-6">
-                <label className="block text-lg font-semibold mb-2">Quantity</label>
-                <input
+                <label className="block text-sm font-medium mb-2">Quantity</label>
+                <Input
                   type="number"
                   min="1"
-                  value={quantity || ''}
+                  value={quantity || ""}
                   onChange={(e) => handleQuantityChange(e.target.value)}
-                  className="w-full bg-[#0F1419] border border-[#23262b] rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
                   placeholder="Enter quantity"
                 />
               </div>
 
               {/* Total Price Display */}
               <div className="mb-6">
-                <div className="bg-[#0F1419] rounded-lg p-4">
-                  <p className="text-lg mb-2">Total Amount</p>
-                  <p className="text-3xl font-bold text-green-500">
-                    PKR {totalPrice.toFixed(2)}
-                  </p>
-                </div>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
+                    <p className="text-3xl font-bold text-primary">
+                      PKR {formatDecimal(totalPrice)}
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Buy Button */}
               <div className="mt-auto">
-                <button
-                    onClick={handleBuySubmit}
-                    disabled={!selectedStock || quantity <= 0 || isSubmitting}
-                    className={`w-full py-4 rounded-lg font-bold text-lg transition-colors ${
-                        selectedStock && quantity > 0 && !isSubmitting
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    }`}
-                    >
-                    {isSubmitting ? 'Processing...' : `Buy ${quantity > 0 ? `${quantity} Shares` : 'Shares'}`}
-                </button>
+                <Button
+                  onClick={handleBuySubmit}
+                  disabled={!selectedStock || quantity <= 0 || isSubmitting}
+                  className="w-full py-6 text-lg"
+                  size="lg"
+                >
+                  {isSubmitting ? "Processing..." : `Buy ${quantity > 0 ? `${quantity} Shares` : "Shares"}`}
+                </Button>
               </div>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 
@@ -277,6 +260,6 @@ function getPrice(tick: Tick | null | undefined): number {
 function getChange(tick: Tick | null | undefined): { change: number; changePercent: number } {
   if (!tick) return { change: 0, changePercent: 0 };
   const change = tick.change || 0;
-  const changePercent = (change / (tick.price - change)) * 100;
+  const changePercent = tick.price ? (change / (tick.price - change)) * 100 : 0;
   return { change, changePercent };
 }

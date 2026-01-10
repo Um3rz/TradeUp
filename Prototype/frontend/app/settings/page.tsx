@@ -1,189 +1,227 @@
-'use client'
-import { useState, useEffect, useRef } from "react";
-import TopBar from '@/components/topbar';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+'use client';
+
+import { useRef } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from 'next/navigation';
-import { uploadProfileImage, updateUserName, updateUserEmail, updateUserPassword } from "@/lib/userService";
+import { toast } from "sonner";
+import { Camera } from "lucide-react";
+import { AppShell } from "@/components/layout";
+import { PageHeader } from "@/components/common";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { uploadFile, http, ApiException } from "@/lib/http";
 import { useUser } from "@/context/UserContext";
 
+type SettingsFormFields = {
+  name: string;
+  email: string;
+  password: string;
+  confirm: string;
+};
 
 export default function Settings() {
-    type AuthFormFields = {
-        name: string;
-        email: string;
-        password: string;
-        confirm: string;
-    };
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<SettingsFormFields>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user, refreshUser } = useUser();
 
-    const { register, handleSubmit, setValue, formState: { errors } } = useForm<AuthFormFields>();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const { user, isLoading, refreshUser } = useUser();
-    const router = useRouter();
+  // Initialize form with user data
+  if (user && !errors.name && !errors.email) {
+    setValue('name', user.name || '');
+    setValue('email', user.email || '');
+  }
 
-    // Session check state
-    const [sessionChecked, setSessionChecked] = useState(false);
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
+  };
 
-    useEffect(() => {
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-        if (!token) {
-            router.replace("/"); // Redirect to login immediately
-        } else {
-            // Use setTimeout to defer state update to avoid synchronous setState in effect
-            setTimeout(() => setSessionChecked(true), 0);
-        }
-    }, [router]);
-
-    // Only show loading spinner until user is loaded
-    useEffect(() => {
-        if (user) {
-            setValue('name', user.name || '');
-            setValue('email', user.email || '');
-        }
-    }, [user?.id, user?.name, user?.email, setValue]); // Only run when specific user properties change
-
-    const handleButtonClick = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.click();
-        }
-    };
-
-    async function changeData(data: AuthFormFields) {
-        try {
-            if (!data.confirm && (data.name !== user?.name || data.email !== user?.email || data.password)) {
-                return;
-            }
-            if (data.name && data.name !== user?.name) {
-                await updateUserName(data.name, data.confirm);
-            }
-            if (data.email && data.email !== user?.email) {
-                await updateUserEmail(data.email, data.confirm);
-            }
-            if (data.password) {
-                await updateUserPassword(data.confirm, data.password);
-            }
-            await refreshUser();
-            setValue('name', user?.name || '');
-            setValue('email', user?.email || '');
-            setValue('password', '');
-            setValue('confirm', '');
-        } catch (error: unknown) {
-            console.error('Failed to update profile:', error);
-        }
+  async function changeData(data: SettingsFormFields) {
+    try {
+      if (!data.confirm && (data.name !== user?.name || data.email !== user?.email || data.password)) {
+        toast.error("Please enter your current password to make changes.");
+        return;
+      }
+      
+      if (data.name && data.name !== user?.name) {
+        await http.put('/users/name', { newName: data.name, currentPassword: data.confirm });
+        toast.success("Name updated successfully");
+      }
+      
+      if (data.email && data.email !== user?.email) {
+        await http.put('/users/email', { newEmail: data.email, currentPassword: data.confirm });
+        toast.success("Email updated successfully");
+      }
+      
+      if (data.password) {
+        await http.put('/users/password', { currentPassword: data.confirm, newPassword: data.password });
+        toast.success("Password updated successfully");
+      }
+      
+      await refreshUser();
+      setValue('password', '');
+      setValue('confirm', '');
+    } catch (error) {
+      const message = error instanceof ApiException ? error.message : "Failed to update profile";
+      toast.error(message);
     }
+  }
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            try {
-                await uploadProfileImage(file);
-                await refreshUser();
-            } catch (error) {
-                console.error('Failed to upload profile image:', error);
-            }
-        }
-    };
-
-    // Only render spinner until session is checked and user is loaded
-    if (!sessionChecked || isLoading || !user) {
-        return (
-            <div className='min-h-screen bg-[#111418] flex items-center justify-center'>
-                <span className='text-white text-xl'>Loading...</span>
-            </div>
-        );
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      try {
+        await uploadFile('/users/profile-picture', file, 'file');
+        await refreshUser();
+        toast.success("Profile picture updated");
+      } catch (error) {
+        const message = error instanceof ApiException ? error.message : "Failed to upload profile image";
+        toast.error(message);
+      }
     }
+  };
 
-    return (
-        <div className="min-h-screen bg-[#111418]">
-            <TopBar />
-            <div className="flex flex-col items-center">
-                <h1 className='font-semibold text-white text-3xl mb-10 p-0 m-0'>Settings</h1>
-                <div className="flex justify-center gap-30">
-                    <div className='bg-[#181B20] text-white rounded-3xl flex flex-col items-center w-105 h-120 p-9 gap-4'>
-                        <h1 className='text-left w-[100%] font-semibold text-white text-2xl mb-5 p-0 m-0'>Profile</h1>
-                        <Avatar className="cursor-pointer w-30 h-30" >
-                            {user?.profileImageUrl
-                                ? <AvatarImage src={user.profileImageUrl} className="scale-120 border border-[#23262b]" />
-                                : <AvatarFallback className="bg-[#111418] text-white">CN</AvatarFallback>
-                            }
-                        </Avatar>
-                        <p className="font-semibold text-white text-3xl p-0 m-0">{user?.name || ''}</p>
-                        <p>{user?.email || ''}</p>
-                        <button className="rounded-lg cursor-pointer bg-[#111418] w-60 h-12 mt-8" onClick={handleButtonClick}>Change Picture</button>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            ref={fileInputRef}
-                            className="hidden"
-                            onChange={handleFileChange}
-                        />
-                    </div>
-                    <div className='bg-[#181B20] text-white rounded-3xl flex flex-col w-105 h-120 p-7 '>
-                        <h1 className='text-left w-[100%] font-semibold text-white text-2xl mb-5 p-0 m-0'>Account Settings</h1>
-                        <div className="mb-3">
-                            <p>Full Name</p>
-                            <Input 
-                                {...register('name')} 
-                                type="text" 
-                                placeholder="" 
-                                className="border border-[#23262b] text-white" 
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <p>Email</p>
-                            <Input 
-                                {...register('email', {
-                                    pattern: {
-                                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                                        message: "Please enter a valid email address.",
-                                    },
-                                })} 
-                                type="email" 
-                                placeholder="" 
-                                className="border border-[#23262b] text-white" 
-                            />
-                            {errors.email && (
-                                <span className="text-red-500 text-xs mt-1">
-                                    {errors.email.message}
-                                </span>
-                            )}
-                        </div>
-                        <div className="mb-3">
-                            <p>New Password</p>
-                            <Input 
-                                {...register('password', {
-                                    minLength: {
-                                        value: 8,
-                                        message: "Password should be at least 8 characters long",
-                                    },
-                                })} 
-                                type="password" 
-                                placeholder="" 
-                                className="border border-[#23262b] text-white" 
-                            />
-                            {errors.password && (
-                                <span className="text-red-500 text-xs mt-1">
-                                    {errors.password.message}
-                                </span>
-                            )}
-                        </div>
-                        <div className="mb-5">
-                            <p>Current Password</p>
-                            <Input 
-                                {...register('confirm')} 
-                                type="password" 
-                                placeholder="" 
-                                className="border border-[#23262b] text-white" 
-                            />
-                        </div>
-                        <div className="flex justify-between">
-                            <button onClick={handleSubmit(changeData)} className="rounded-lg cursor-pointer bg-[#22c55e] w-40 h-10">Update Info</button>
-                            <button className="text-[#ef4444] cursor-pointer mr-6">Cancel</button>
-                        </div>
-                    </div>
-                </div>
+  const getInitials = (name?: string | null, email?: string | null) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  return (
+    <AppShell>
+      <PageHeader 
+        title="Settings" 
+        description="Manage your account settings and profile"
+      />
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Profile Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <Avatar className="h-24 w-24">
+                {user?.profileImageUrl ? (
+                  <AvatarImage src={user.profileImageUrl} alt={user.name || "User"} />
+                ) : null}
+                <AvatarFallback className="text-2xl">
+                  {getInitials(user?.name, user?.email)}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                size="icon"
+                variant="secondary"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                onClick={handleButtonClick}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+              />
             </div>
-        </div>
-    );
+            <div className="text-center">
+              <h3 className="text-xl font-semibold">{user?.name || 'User'}</h3>
+              <p className="text-sm text-muted-foreground">{user?.email || ''}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Account Settings Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(changeData)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input 
+                  id="name"
+                  {...register('name')} 
+                  type="text" 
+                  placeholder="Your name"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email"
+                  {...register('email', {
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message: "Please enter a valid email address.",
+                    },
+                  })} 
+                  type="email" 
+                  placeholder="your@email.com"
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">New Password</Label>
+                <Input 
+                  id="password"
+                  {...register('password', {
+                    minLength: {
+                      value: 8,
+                      message: "Password should be at least 8 characters long",
+                    },
+                  })} 
+                  type="password" 
+                  placeholder="Leave blank to keep current"
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirm">Current Password</Label>
+                <Input 
+                  id="confirm"
+                  {...register('confirm')} 
+                  type="password" 
+                  placeholder="Required to make changes"
+                />
+              </div>
+              
+              <div className="flex justify-between pt-4">
+                <Button type="submit">
+                  Update Info
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => {
+                    setValue('name', user?.name || '');
+                    setValue('email', user?.email || '');
+                    setValue('password', '');
+                    setValue('confirm', '');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppShell>
+  );
 }

@@ -24,6 +24,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
