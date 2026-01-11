@@ -86,10 +86,10 @@ I implemented the full Prototype Phase 1 backend in your NestJS app using Postgr
 
 # Environment Variables
 
-Create `Prototype/backend/.env`:
-- `DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DBNAME?schema=public"`
-- `JWT_SECRET="replace-with-strong-secret"`
-- Optional: `PSX_API_BASE="https://psxterminal.com"`
+Create `Prototype/backend/.env` (see `Prototype/backend/env.example`) and set:
+- `DATABASE_URL` (Postgres connection string)
+- `JWT_SECRET` (strong secret used to sign JWTs)
+- Optional: `PSX_API_BASE` (defaults to `https://psxterminal.com`)
 
 # How to Run
 

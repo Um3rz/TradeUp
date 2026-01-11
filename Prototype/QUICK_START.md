@@ -17,6 +17,8 @@ From the repo root:
 
 ```bash
 cd Prototype/backend
+cp env.example .env
+# edit .env as needed (DATABASE_URL, API keys, JWT secret, etc.)
 docker compose up --build -d
 ```
 
