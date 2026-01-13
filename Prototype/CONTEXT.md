@@ -305,8 +305,8 @@ import { Injectable } from '@nestjs/common';
 
 ### Backend (.env)
 ```bash
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
-JWT_SECRET="your-secret-key"
+DATABASE_URL="<postgres-connection-string>"
+JWT_SECRET="<jwt-secret>"
 PORT=3001
 ```
 

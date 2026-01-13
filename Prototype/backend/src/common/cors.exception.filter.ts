@@ -1,6 +1,37 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+/**
+ * Normalize the error response to always have a string message.
+ * This ensures the frontend can reliably display error messages.
+ */
+function normalizeMessage(response: unknown): string {
+  if (typeof response === 'string') {
+    return response;
+  }
+  
+  if (response && typeof response === 'object') {
+    const obj = response as Record<string, unknown>;
+    
+    // Handle Nest validation pipe errors (array of messages)
+    if (Array.isArray(obj.message)) {
+      return obj.message.join(' • ');
+    }
+    
+    // Handle standard HttpException response
+    if (typeof obj.message === 'string') {
+      return obj.message;
+    }
+    
+    // Handle error property
+    if (typeof obj.error === 'string') {
+      return obj.error;
+    }
+  }
+  
+  return 'An unexpected error occurred';
+}
+
 @Catch()
 export class CorsExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
@@ -35,11 +66,21 @@ export class CorsExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
+    // Get the raw exception response
+    const exceptionResponse = exception instanceof HttpException 
+      ? exception.getResponse() 
+      : null;
+
+    // Always return a normalized error response with string message
     response.status(status).json({
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
-      message: exception instanceof HttpException ? exception.getResponse() : 'Internal server error',
+      message: normalizeMessage(exceptionResponse),
+      // Include raw details for debugging (frontend can optionally use this)
+      details: exceptionResponse !== null && typeof exceptionResponse === 'object' 
+        ? exceptionResponse 
+        : undefined,
     });
   }
 }

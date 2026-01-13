@@ -2149,8 +2149,8 @@ Create a `.env` file in the `backend` directory:
 
 ```bash
 # .env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
-JWT_SECRET="your-super-secret-jwt-key-change-this"
+DATABASE_URL="<postgres-connection-string>"
+JWT_SECRET="<jwt-secret>"
 PORT=3001
 ```
 
@@ -2158,7 +2158,7 @@ PORT=3001
 
 **Example** (Neon):
 ```
-DATABASE_URL="postgresql://neondb_owner:password@ep-xxx.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="<neon-postgres-connection-string>"
 ```
 
 #### 2.4 Generate Prisma Client
@@ -2315,7 +2315,7 @@ This will connect to the WebSocket server and subscribe to test symbols.
 
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` | Yes |
+| `DATABASE_URL` | PostgreSQL connection string | `<postgres-connection-string>` | Yes |
 | `JWT_SECRET` | Secret key for JWT signing | `my-super-secret-key` | Yes |
 | `PORT` | Server port | `3001` | No (default: 3001) |
 | `PSX_API_BASE` | PSX Terminal API base URL | `https://psxterminal.com` | No (has default) |

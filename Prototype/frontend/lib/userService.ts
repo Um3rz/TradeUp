@@ -6,8 +6,26 @@ export interface User {
   email: string;
   name: string | null;
   role: string;
-  balance: number;
+  /** Balance as string or number (Prisma returns Decimal as string) */
+  balance: string | number;
   profileImageUrl?: string | null;
+}
+
+/**
+ * Check if user balance is unset (new user who hasn't funded wallet yet)
+ * Handles both string and number types from Prisma Decimal
+ */
+export function isBalanceUnset(balance: string | number | null | undefined): boolean {
+  if (balance === null || balance === undefined) return false;
+  return Number(balance) === -1;
+}
+
+/**
+ * Get balance as a number (handles Prisma Decimal string conversion)
+ */
+export function getBalanceNumber(balance: string | number | null | undefined): number {
+  if (balance === null || balance === undefined) return 0;
+  return Number(balance);
 }
 
 // Upload profile image for current user

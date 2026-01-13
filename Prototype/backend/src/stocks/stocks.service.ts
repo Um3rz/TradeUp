@@ -17,7 +17,17 @@ export interface TickData {
   [key: string]: unknown;
 }
 
-export type Kline = [number, number, number, number, number, number];
+/** Kline data from PSX API - already in object format */
+export interface Kline {
+  symbol?: string;
+  timeframe?: string;
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
 
 @Injectable()
 export class StocksService {
@@ -31,11 +41,16 @@ export class StocksService {
 
   async getTick(symbol: string, type = 'REG'): Promise<TickData | null> {
     const url = `${this.base}/api/ticks/${type}/${encodeURIComponent(symbol)}`;
-    const { data } = await axios.get<PsxApiResponse<TickData>>(url, {
-      timeout: 5000,
-    });
-    if (data?.success) return data.data;
-    return null;
+    try {
+      const { data } = await axios.get<PsxApiResponse<TickData>>(url, {
+        timeout: 5000,
+      });
+      if (data?.success) return data.data;
+      return null;
+    } catch (error) {
+      console.error(`Failed to fetch tick for ${symbol}:`, error.message);
+      return null;
+    }
   }
 
   async listFeaturedWithTicks() {
@@ -63,12 +78,14 @@ export class StocksService {
         params,
         timeout: 10000,
       });
+
       if (data?.success && Array.isArray(data.data)) {
         return data.data;
       }
       return [];
     } catch (error) {
       console.error('Failed to fetch klines:', error);
+
       return [];
     }
   }

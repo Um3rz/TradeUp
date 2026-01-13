@@ -1,8 +1,32 @@
 'use client';
+
 import { useState, useEffect, useCallback } from 'react';
-import TopBar from '@/components/topbar';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/context/UserContext';
+import { toast } from 'sonner';
+import { TrendingUp, TrendingDown, DollarSign, Briefcase, PiggyBank, Wallet } from 'lucide-react';
+import { AppShell } from '@/components/layout';
+import { PageHeader, EmptyState } from '@/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { http, ApiException } from '@/lib/http';
+import { formatUSD, formatPercent, getPnLClass } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 interface PortfolioItem {
   symbol: string;
@@ -28,235 +52,288 @@ interface PortfolioData {
 }
 
 export default function Portfolio() {
-  const router = useRouter();
-  const { user, isLoading: userLoading } = useUser();
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Session check
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-    if (!token) {
-      router.replace("/");
-    }
-  }, [router]);
+  
+  // Sell dialog state
+  const [sellDialogOpen, setSellDialogOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<PortfolioItem | null>(null);
+  const [sellQuantity, setSellQuantity] = useState('');
+  const [isSelling, setIsSelling] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.push('/');
-      return;
-    }
-
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-      
-      const response = await fetch(`${API_BASE_URL}/trades/portfolio`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch portfolio data.');
-      }
-
-      const data = await response.json();
+      setError(null);
+      const data = await http.get<PortfolioData>('/trades/portfolio');
       setPortfolioData(data);
-    } catch (err: unknown) {
-      setError((err as Error).message);
+    } catch (err) {
+      const message = err instanceof ApiException ? err.message : 'Failed to fetch portfolio data.';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     fetchPortfolio();
   }, [fetchPortfolio]);
 
-  const handleSell = async (symbol: string, currentQuantity: number) => {
-    const quantityToSell = prompt(`How many shares of ${symbol} do you want to sell? (You own ${currentQuantity})`);
-    if (!quantityToSell || isNaN(Number(quantityToSell)) || Number(quantityToSell) <= 0) {
-      alert('Please enter a valid quantity.');
+  const openSellDialog = (item: PortfolioItem) => {
+    setSelectedStock(item);
+    setSellQuantity('');
+    setSellDialogOpen(true);
+  };
+
+  const handleSell = async () => {
+    if (!selectedStock) return;
+    
+    const quantity = Number(sellQuantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      toast.error('Please enter a valid quantity.');
       return;
     }
 
-    const quantity = Number(quantityToSell);
-    if (quantity > currentQuantity) {
-      alert('You cannot sell more shares than you own.');
+    if (quantity > selectedStock.quantity) {
+      toast.error('You cannot sell more shares than you own.');
       return;
     }
 
-    const token = localStorage.getItem('access_token');
+    setIsSelling(true);
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-      
-      const response = await fetch(`${API_BASE_URL}/trades/sell`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ symbol, quantity }),
+      await http.post('/trades/sell', { 
+        symbol: selectedStock.symbol, 
+        quantity 
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to sell stock.');
-      }
-
-      alert('Stock sold successfully!');
+      
+      toast.success(`Successfully sold ${quantity} shares of ${selectedStock.symbol}`);
+      setSellDialogOpen(false);
       setLoading(true);
       fetchPortfolio();
-    } catch (err: unknown) {
-      alert(`Error selling stock: ${(err as Error).message}`);
+    } catch (err) {
+      const message = err instanceof ApiException ? err.message : 'Failed to sell stock.';
+      toast.error(message);
+    } finally {
+      setIsSelling(false);
     }
   };
 
-  const formatCurrency = (value: string): string => {
-    return parseFloat(value).toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
+  const totalPnlIsPositive = portfolioData ? parseFloat(portfolioData.totalUnrealizedPnl) >= 0 : true;
 
-  const formatPercentage = (value: string): string => {
-    const numValue = parseFloat(value);
-    return `${numValue >= 0 ? '+' : ''}${numValue.toFixed(2)}%`;
-  };
-
-  if (userLoading || !user || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-[#111418] flex items-center justify-center">
-        <span className="text-white text-xl">Loading...</span>
-      </div>
+      <AppShell>
+        <div className="flex items-center justify-center py-16">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </AppShell>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#111418] flex items-center justify-center">
-        <span className="text-red-500 text-xl">{error}</span>
-      </div>
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-16">
+          <p className="text-destructive text-xl">{error}</p>
+          <Button className="mt-4" onClick={() => { setLoading(true); fetchPortfolio(); }}>
+            Try Again
+          </Button>
+        </div>
+      </AppShell>
     );
   }
 
   if (!portfolioData) {
     return (
-      <div className="min-h-screen bg-[#111418] flex items-center justify-center">
-        <span className="text-white text-xl">No data available</span>
-      </div>
+      <AppShell>
+        <div className="flex items-center justify-center py-16">
+          <p className="text-muted-foreground text-xl">No data available</p>
+        </div>
+      </AppShell>
     );
   }
 
-  const totalPnlIsPositive = parseFloat(portfolioData.totalUnrealizedPnl) >= 0;
-
   return (
-    <div className="min-h-screen bg-[#111418]">
-      <TopBar />
-      <div className="p-4 md:p-10">
-        <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#181B20] text-white rounded-2xl p-6">
-              <p className="text-gray-400 text-sm mb-2">Cash Balance</p>
-              <p className="text-3xl font-semibold">{formatCurrency(portfolioData.balance)}</p>
-            </div>
+    <AppShell>
+      <PageHeader 
+        title="Portfolio" 
+        description="Track your investments and performance"
+      />
 
-            <div className="bg-[#181B20] text-white rounded-2xl p-6">
-              <p className="text-gray-400 text-sm mb-2">Total Invested</p>
-              <p className="text-3xl font-semibold">{formatCurrency(portfolioData.totalInvested)}</p>
-            </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Cash Balance</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatUSD(portfolioData.balance)}</div>
+          </CardContent>
+        </Card>
 
-            <div className="bg-[#181B20] text-white rounded-2xl p-6">
-              <p className="text-gray-400 text-sm mb-2">Portfolio Value</p>
-              <p className="text-3xl font-semibold">{formatCurrency(portfolioData.totalPortfolioValue)}</p>
-            </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Invested</CardTitle>
+            <PiggyBank className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatUSD(portfolioData.totalInvested)}</div>
+          </CardContent>
+        </Card>
 
-            <div className="bg-[#181B20] text-white rounded-2xl p-6">
-              <p className="text-gray-400 text-sm mb-2">Total Account Value</p>
-              <p className="text-3xl font-semibold">{formatCurrency(portfolioData.totalAccountValue)}</p>
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Portfolio Value</CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatUSD(portfolioData.totalPortfolioValue)}</div>
+          </CardContent>
+        </Card>
 
-          <div className="bg-[#181B20] text-white rounded-2xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm mb-2">Total Unrealized P&L</p>
-                <p className={`text-4xl font-bold ${totalPnlIsPositive ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatCurrency(portfolioData.totalUnrealizedPnl)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-gray-400 text-sm mb-2">Return</p>
-                <p className={`text-4xl font-bold ${totalPnlIsPositive ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatPercentage(portfolioData.totalPnlPercentage)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#181B20] text-white rounded-2xl p-6 overflow-x-auto">
-            <h2 className="text-2xl font-semibold mb-6">Holdings</h2>
-            <table className="text-left w-full min-w-[800px]">
-              <thead>
-                <tr className="border-b border-[#23262A]">
-                  <th className="py-3 px-4">Symbol</th>
-                  <th className="py-3 px-4">Name</th>
-                  <th className="py-3 px-4 text-right">Quantity</th>
-                  <th className="py-3 px-4 text-right">Avg. Price</th>
-                  <th className="py-3 px-4 text-right">Current Price</th>
-                  <th className="py-3 px-4 text-right">Invested</th>
-                  <th className="py-3 px-4 text-right">Current Value</th>
-                  <th className="py-3 px-4 text-right">P&L</th>
-                  <th className="py-3 px-4 text-right">P&L %</th>
-                  <th className="py-3 px-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {portfolioData.portfolio.length > 0 ? (
-                  portfolioData.portfolio.map((item) => {
-                    const pnlIsPositive = parseFloat(item.unrealizedPnl) >= 0;
-                    return (
-                      <tr key={item.symbol} className="border-t border-[#23262A] hover:bg-[#1F2229]">
-                        <td className="py-4 px-4 font-semibold">{item.symbol}</td>
-                        <td className="py-4 px-4 text-gray-400">{item.name || '-'}</td>
-                        <td className="py-4 px-4 text-right">{item.quantity}</td>
-                        <td className="py-4 px-4 text-right">{formatCurrency(item.avgPrice)}</td>
-                        <td className="py-4 px-4 text-right">{formatCurrency(item.currentPrice)}</td>
-                        <td className="py-4 px-4 text-right">{formatCurrency(item.invested)}</td>
-                        <td className="py-4 px-4 text-right">{formatCurrency(item.currentValue)}</td>
-                        <td className={`py-4 px-4 text-right font-semibold ${pnlIsPositive ? 'text-green-500' : 'text-red-500'}`}>
-                          {formatCurrency(item.unrealizedPnl)}
-                        </td>
-                        <td className={`py-4 px-4 text-right font-semibold ${pnlIsPositive ? 'text-green-500' : 'text-red-500'}`}>
-                          {formatPercentage(item.pnlPercentage)}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <button
-                            onClick={() => handleSell(item.symbol, item.quantity)}
-                            className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded transition-colors"
-                          >
-                            Sell
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={10} className="text-center py-10 text-gray-400">
-                      You have no holdings. Start trading to see your portfolio here.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Account Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatUSD(portfolioData.totalAccountValue)}</div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+
+      {/* P&L Card */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Total Unrealized P&L</p>
+              <p className={cn("text-3xl font-bold", totalPnlIsPositive ? 'text-emerald-400' : 'text-rose-400')}>
+                {formatUSD(portfolioData.totalUnrealizedPnl)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium text-muted-foreground mb-1">Return</p>
+              <div className="flex items-center gap-2">
+                {totalPnlIsPositive ? (
+                  <TrendingUp className="h-6 w-6 text-emerald-400" />
+                ) : (
+                  <TrendingDown className="h-6 w-6 text-rose-400" />
+                )}
+                <p className={cn("text-3xl font-bold", totalPnlIsPositive ? 'text-emerald-400' : 'text-rose-400')}>
+                  {formatPercent(portfolioData.totalPnlPercentage)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Holdings Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Holdings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {portfolioData.portfolio.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Symbol</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Avg. Price</TableHead>
+                  <TableHead className="text-right">Current Price</TableHead>
+                  <TableHead className="text-right">Invested</TableHead>
+                  <TableHead className="text-right">Current Value</TableHead>
+                  <TableHead className="text-right">P&L</TableHead>
+                  <TableHead className="text-right">P&L %</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {portfolioData.portfolio.map((item) => {
+                  const pnlIsPositive = parseFloat(item.unrealizedPnl) >= 0;
+                  return (
+                    <TableRow key={item.symbol}>
+                      <TableCell className="font-semibold">{item.symbol}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.name || '-'}</TableCell>
+                      <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatUSD(item.avgPrice)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatUSD(item.currentPrice)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatUSD(item.invested)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatUSD(item.currentValue)}</TableCell>
+                      <TableCell className={cn("text-right tabular-nums font-semibold", pnlIsPositive ? 'text-emerald-400' : 'text-rose-400')}>
+                        {formatUSD(item.unrealizedPnl)}
+                      </TableCell>
+                      <TableCell className={cn("text-right tabular-nums font-semibold", pnlIsPositive ? 'text-emerald-400' : 'text-rose-400')}>
+                        {formatPercent(item.pnlPercentage)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openSellDialog(item)}
+                        >
+                          Sell
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <EmptyState 
+              variant="portfolio"
+              action={{
+                label: "Start Trading",
+                onClick: () => window.location.href = '/buy'
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sell Dialog */}
+      <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sell {selectedStock?.symbol}</DialogTitle>
+            <DialogDescription>
+              You own {selectedStock?.quantity} shares. Enter how many you want to sell.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              type="number"
+              placeholder="Enter quantity"
+              value={sellQuantity}
+              onChange={(e) => setSellQuantity(e.target.value)}
+              min="1"
+              max={selectedStock?.quantity}
+            />
+            {selectedStock && sellQuantity && Number(sellQuantity) > 0 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Estimated proceeds: {formatUSD(Number(sellQuantity) * parseFloat(selectedStock.currentPrice))}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSellDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleSell}
+              disabled={isSelling || !sellQuantity || Number(sellQuantity) <= 0}
+            >
+              {isSelling ? 'Selling...' : 'Confirm Sell'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AppShell>
   );
 }

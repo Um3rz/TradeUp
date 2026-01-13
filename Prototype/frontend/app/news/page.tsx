@@ -1,48 +1,42 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
-import TopBar from '@/components/topbar';
-import Image from 'next/image';
-import { fetchLatestNews, fetchStockNews } from '@/lib/newsService';
-import { NewsArticle, StockNewsArticle } from '@/types/news';
-import { useUser } from "@/context/UserContext";
+
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import { Search, ExternalLink } from "lucide-react";
+import { AppShell } from "@/components/layout";
+import { PageHeader, EmptyState } from "@/components/common";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { http, ApiException } from "@/lib/http";
+import { formatDate } from "@/lib/format";
+
+interface NewsArticle {
+  title: string;
+  link: string;
+  image?: string;
+  content?: string;
+  date: string;
+}
+
+interface StockNewsArticle {
+  title: string;
+  url: string;
+  image_url?: string;
+  description?: string;
+  published_at: string;
+}
 
 export default function NewsPage() {
-  const { user, isLoading: userLoading } = useUser();
-  
   const [generalArticles, setGeneralArticles] = useState<NewsArticle[]>([]);
   const [stockArticles, setStockArticles] = useState<StockNewsArticle[]>([]);
-  const [searchTicker, setSearchTicker] = useState<string>('');
-  const [lastSearchedTicker, setLastSearchedTicker] = useState<string>('');
+  const [searchTicker, setSearchTicker] = useState<string>("");
+  const [lastSearchedTicker, setLastSearchedTicker] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState<boolean>(false);
-
-
-
-  const formatDate = (dateString: string): string => {
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const formatDateTime = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateString;
-    }
-  };
 
   const loadLatestNews = useCallback(async (): Promise<void> => {
     try {
@@ -51,11 +45,11 @@ export default function NewsPage() {
       setIsSearching(false);
       setStockArticles([]);
       
-      const newsArticles = await fetchLatestNews();
-      setGeneralArticles(newsArticles);
+      const newsArticles = await http.get<NewsArticle[]>("/news/latest", { noAuth: true });
+      setGeneralArticles(Array.isArray(newsArticles) ? newsArticles : []);
     } catch (err) {
-      setError('Failed to load news');
-      console.error('Error fetching latest news:', err);
+      const message = err instanceof ApiException ? err.message : "Failed to load news";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -73,28 +67,22 @@ export default function NewsPage() {
       setIsSearching(true);
       setLastSearchedTicker(ticker.toUpperCase());
       
-      const searchedStockArticles = await fetchStockNews(ticker.toUpperCase());
-      setStockArticles(searchedStockArticles);
+      const searchedStockArticles = await http.post<StockNewsArticle[]>(
+        "/news/stock", 
+        { ticker: ticker.toUpperCase() },
+        { noAuth: true }
+      );
+      setStockArticles(Array.isArray(searchedStockArticles) ? searchedStockArticles : []);
       
-      const latestNews = await fetchLatestNews();
-      setGeneralArticles(latestNews);
+      const latestNews = await http.get<NewsArticle[]>("/news/latest", { noAuth: true });
+      setGeneralArticles(Array.isArray(latestNews) ? latestNews : []);
     } catch (err) {
-      setError('Failed to load stock news');
-      console.error('Error fetching stock news:', err);
+      const message = err instanceof ApiException ? err.message : "Failed to load stock news";
+      setError(message);
+    } finally {
       setSearchLoading(false);
     }
   }, [loadLatestNews]);
-
-  // Clear search loading when articles are fetched
-  useEffect(() => {
-    if (isSearching && (stockArticles.length > 0 || generalArticles.length > 0)) {
-      setSearchLoading(false);
-    }
-  }, [stockArticles, generalArticles, isSearching]);
-
-  const handleInputChange = (value: string): void => {
-    setSearchTicker(value);
-  };
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
@@ -109,166 +97,179 @@ export default function NewsPage() {
     loadLatestNews();
   }, [loadLatestNews]);
 
-  // Full-screen loading before user is loaded or initial data load
-  if (userLoading || !user || loading) {
-    return (
-      <div className='min-h-screen bg-[#0F1419] flex items-center justify-center'>
-        <span className='text-white text-xl'>Loading...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#0F1419] text-white">
-      <TopBar />
-      
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <h1 className="text-4xl font-bold mb-8">Market News</h1>
-        
-        <form onSubmit={handleSearchSubmit} className="mb-8">
-          <div className="flex gap-3">
-            <input
+    <AppShell>
+      <PageHeader 
+        title="Market News" 
+        description="Stay updated with the latest financial news"
+      />
+
+      {/* Search Form */}
+      <form onSubmit={handleSearchSubmit} className="mb-8">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
               type="text"
               value={searchTicker}
-              onChange={(e) => handleInputChange(e.target.value)}
+              onChange={(e) => setSearchTicker(e.target.value)}
               placeholder="Search ticker (e.g., AAPL)"
-              className="flex-1 bg-[#181B20] border border-[#23262b] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+              className="pl-10"
             />
-            <button
-              type="submit"
-              disabled={searchLoading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              Search
-            </button>
           </div>
-        </form>
+          <Button type="submit" disabled={searchLoading}>
+            {searchLoading ? "Searching..." : "Search"}
+          </Button>
+        </div>
+      </form>
 
-        {searchLoading && (
-          <div className="text-sm text-blue-400 mb-6 flex items-center gap-2">
-            <div className="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
-            Searching for {searchTicker.toUpperCase()}...
-          </div>
-        )}
+      {searchLoading && (
+        <div className="flex items-center gap-2 text-sm text-primary mb-6">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          Searching for {searchTicker.toUpperCase()}...
+        </div>
+      )}
 
-        <div>
-          {error ? (
-            <div className="text-red-500 text-center py-8 bg-red-900 bg-opacity-20 rounded-lg border border-red-500 mb-8">
-              {error}
-            </div>
-          ) : (
+      {loading ? (
+        <div className="grid gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-48 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <Card className="border-destructive bg-destructive/10">
+          <CardContent className="py-8 text-center">
+            <p className="text-destructive">{error}</p>
+            <Button variant="outline" className="mt-4" onClick={loadLatestNews}>
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-8">
+          {/* Stock-specific News */}
+          {isSearching && stockArticles.length > 0 && (
             <div>
-              {isSearching && stockArticles.length > 0 && (
-                <div className="mb-12">
-                  <h2 className="text-2xl font-bold mb-6 text-blue-400">
-                    {lastSearchedTicker} News
-                  </h2>
-                  <div className="grid gap-6">
-                    {stockArticles.map((article: StockNewsArticle, index: number) => (
-                      <a
-                        key={`stock-${index}-${article.title}`}
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group bg-[#181B20] border border-[#23262b] rounded-lg overflow-hidden hover:border-blue-500 transition-all duration-300 flex"
-                      >
-                        {article.image_url && (
-                          <div className="w-64 h-48 flex-shrink-0 overflow-hidden bg-[#0F1419]">
-                            <Image
-                              src={article.image_url}
-                              alt={article.title}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                        
-                        <div className="p-6 flex flex-col justify-between flex-1">
-                          <div>
-                            <h3 className="font-bold text-lg mb-2 group-hover:text-blue-400 transition-colors line-clamp-2">
-                              {article.title}
-                            </h3>
-                            <p className="text-gray-300 text-sm line-clamp-3">
-                              {article.description}
-                            </p>
-                          </div>
-                          
-                          <div className="mt-4 pt-4 border-t border-[#23262b]">
-                            <p className="text-xs text-gray-500">
-                              {formatDate(article.published_at)}
-                            </p>
-                          </div>
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <h2 className="text-2xl font-bold mb-6">
-                  {isSearching ? 'General News' : 'Latest News'}
-                </h2>
-                {generalArticles.length === 0 ? (
-                  <div className="text-gray-400 text-center py-8 bg-[#181B20] rounded-lg border border-[#23262b]">
-                    No articles found
-                  </div>
-                ) : (
-                  <div className="grid gap-6">
-                    {generalArticles.map((article: NewsArticle, index: number) => (
-                      <a
-                        key={`general-${index}-${article.title}`}
-                        href={article.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group bg-[#181B20] border border-[#23262b] rounded-lg overflow-hidden hover:border-blue-500 transition-all duration-300 flex"
-                      >
-                        {article.image && (
-                          <div className="w-64 h-48 flex-shrink-0 overflow-hidden bg-[#0F1419]">
-                            <Image
-                              src={article.image}
-                              alt={article.title}
-                              width={256}
-                              height={192}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                              onError={(e) => {
-                                const target = e.target as HTMLElement;
-                                target.style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        )}
-                        
-                        <div className="p-6 flex flex-col justify-between flex-1">
-                          <div>
-                            <div className="flex justify-between items-start gap-3 mb-3">
-                              <h3 className="font-bold text-lg group-hover:text-blue-400 transition-colors line-clamp-2 flex-1">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-xl font-semibold">{lastSearchedTicker} News</h2>
+                <Badge variant="secondary">{stockArticles.length} articles</Badge>
+              </div>
+              <div className="grid gap-4">
+                {stockArticles.map((article, index) => (
+                  <a
+                    key={`stock-${index}-${article.title}`}
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group"
+                  >
+                    <Card className="transition-colors hover:bg-accent/50">
+                      <CardContent className="p-0">
+                        <div className="flex">
+                          {article.image_url && (
+                            <div className="w-48 h-36 flex-shrink-0 overflow-hidden rounded-l-lg bg-muted">
+                              <Image
+                                src={article.image_url}
+                                alt={article.title}
+                                width={192}
+                                height={144}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            </div>
+                          )}
+                          <div className="p-4 flex flex-col justify-between flex-1">
+                            <div>
+                              <h3 className="font-semibold mb-2 group-hover:text-primary transition-colors line-clamp-2">
                                 {article.title}
                               </h3>
-                              <p className="text-xs text-gray-400 whitespace-nowrap font-medium flex-shrink-0">
-                                {formatDateTime(article.date)}
-                              </p>
+                              {article.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {article.description}
+                                </p>
+                              )}
                             </div>
-                            <div className="text-gray-300 text-sm line-clamp-3" dangerouslySetInnerHTML={{ __html: article.content }} />
-                          </div>
-                          
-                          <div className="mt-4 pt-4 border-t border-[#23262b]">
-                            <p className="text-xs text-gray-500">
-                              {formatDate(article.date)}
-                            </p>
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(article.published_at)}
+                              </span>
+                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
                           </div>
                         </div>
-                      </a>
-                    ))}
-                  </div>
-                )}
+                      </CardContent>
+                    </Card>
+                  </a>
+                ))}
               </div>
             </div>
           )}
+
+          {/* General News */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">
+              {isSearching ? "General News" : "Latest News"}
+            </h2>
+            {generalArticles.length === 0 ? (
+              <EmptyState variant="news" />
+            ) : (
+              <div className="grid gap-4">
+                {generalArticles.map((article, index) => (
+                  <a
+                    key={`general-${index}-${article.title}`}
+                    href={article.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group"
+                  >
+                    <Card className="transition-colors hover:bg-accent/50">
+                      <CardContent className="p-0">
+                        <div className="flex">
+                          {article.image && (
+                            <div className="w-48 h-36 flex-shrink-0 overflow-hidden rounded-l-lg bg-muted">
+                              <Image
+                                src={article.image}
+                                alt={article.title}
+                                width={192}
+                                height={144}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                            </div>
+                          )}
+                          <div className="p-4 flex flex-col justify-between flex-1">
+                            <div>
+                              <h3 className="font-semibold mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                                {article.title}
+                              </h3>
+                              {article.content && (
+                                <div 
+                                  className="text-sm text-muted-foreground line-clamp-2"
+                                  dangerouslySetInnerHTML={{ __html: article.content }}
+                                />
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(article.date)}
+                              </span>
+                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </AppShell>
   );
 }
