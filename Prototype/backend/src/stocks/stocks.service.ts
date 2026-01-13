@@ -48,7 +48,10 @@ export class StocksService {
       if (data?.success) return data.data;
       return null;
     } catch (error) {
-      console.error(`Failed to fetch tick for ${symbol}:`, error.message);
+      console.error(
+        `Failed to fetch tick for ${symbol}:`,
+        (error as Error).message,
+      );
       return null;
     }
   }
@@ -100,7 +103,7 @@ export class StocksService {
     const lastKline = klines[klines.length - 1];
     if (!lastKline) return null;
 
-    const lastKlineTime = new Date(lastKline[0] * 1000);
+    const lastKlineTime = new Date(lastKline.timestamp * 1000);
 
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
@@ -109,12 +112,12 @@ export class StocksService {
       if (klines.length > 1) {
         const yesterdayKline = klines[klines.length - 2];
         if (!yesterdayKline) return null;
-        return yesterdayKline[4];
+        return yesterdayKline.close;
       } else {
         return null;
       }
     } else {
-      return lastKline[4];
+      return lastKline.close;
     }
   }
 
