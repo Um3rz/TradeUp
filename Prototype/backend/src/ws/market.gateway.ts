@@ -16,16 +16,13 @@ interface TickUpdateMessage {
   [key: string]: unknown;
 }
 
-@WebSocketGateway({ 
-  namespace: '/ws', 
+@WebSocketGateway({
+  namespace: '/ws',
   cors: {
-    origin: [
-      'http://localhost:3000',
-      'https://p04-trade-up.vercel.app',
-    ],
+    origin: ['http://localhost:3000', 'https://p04-trade-up.vercel.app'],
     credentials: true,
     methods: ['GET', 'POST'],
-  } 
+  },
 })
 export class MarketGateway implements OnModuleInit {
   @WebSocketServer()
@@ -64,7 +61,6 @@ export class MarketGateway implements OnModuleInit {
         ws.send(JSON.stringify(msg));
       }
     });
-
 
     // Fix: Type 'data' as unknown and safely narrow types instead of using 'any'
     ws.on('message', (data: unknown) => {

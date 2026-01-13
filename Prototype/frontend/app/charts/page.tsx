@@ -292,7 +292,7 @@ export default function Charts() {
         chartRef.current = null;
       }
     };
-  }, []);
+  }, [initializeChart]);
 
   useEffect(() => {
     setCurrentCandle(null);
@@ -355,8 +355,8 @@ export default function Charts() {
 
   return (
     <AppShell>
-      <PageHeader 
-        title="Markets" 
+      <PageHeader
+        title="Markets"
         description="Live stock charts and market data"
       />
 

@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { http, ApiException } from '@/lib/http';
-import { formatUSD, formatPercent, getPnLClass } from '@/lib/format';
+import { formatUSD, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 interface PortfolioItem {
@@ -55,7 +55,7 @@ export default function Portfolio() {
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Sell dialog state
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<PortfolioItem | null>(null);
@@ -87,7 +87,7 @@ export default function Portfolio() {
 
   const handleSell = async () => {
     if (!selectedStock) return;
-    
+
     const quantity = Number(sellQuantity);
     if (isNaN(quantity) || quantity <= 0) {
       toast.error('Please enter a valid quantity.');
@@ -101,11 +101,11 @@ export default function Portfolio() {
 
     setIsSelling(true);
     try {
-      await http.post('/trades/sell', { 
-        symbol: selectedStock.symbol, 
-        quantity 
+      await http.post('/trades/sell', {
+        symbol: selectedStock.symbol,
+        quantity
       });
-      
+
       toast.success(`Successfully sold ${quantity} shares of ${selectedStock.symbol}`);
       setSellDialogOpen(false);
       setLoading(true);
@@ -155,8 +155,8 @@ export default function Portfolio() {
 
   return (
     <AppShell>
-      <PageHeader 
-        title="Portfolio" 
+      <PageHeader
+        title="Portfolio"
         description="Track your investments and performance"
       />
 
@@ -285,7 +285,7 @@ export default function Portfolio() {
               </TableBody>
             </Table>
           ) : (
-            <EmptyState 
+            <EmptyState
               variant="portfolio"
               action={{
                 label: "Start Trading",
@@ -324,8 +324,8 @@ export default function Portfolio() {
             <Button variant="outline" onClick={() => setSellDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleSell}
               disabled={isSelling || !sellQuantity || Number(sellQuantity) <= 0}
             >
