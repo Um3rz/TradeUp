@@ -10,6 +10,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
 import { WsModule } from './ws/ws.module';
 import { NewsModule } from './news/news.module';
 import { TradesModule } from './trades/trades.module';
+import { FriendsModule } from './friends/friends.module';
 
 @Module({
   imports: [
@@ -29,8 +30,10 @@ import { TradesModule } from './trades/trades.module';
     WsModule,
     NewsModule,
     TradesModule,
+    FriendsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
+

@@ -27,10 +27,11 @@ export class AuthService {
   constructor(
     private readonly users: UsersService,
     private readonly jwt: JwtService,
-  ) {}
+  ) { }
 
   async signup(
     email: string,
+    username: string,
     password: string,
     role: 'TRADER' | 'ADMIN' = 'TRADER',
     gender: 'MALE' | 'FEMALE',
@@ -43,11 +44,17 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
+    const existingUsername = await this.users.findByUsername(username);
+    if (existingUsername) {
+      this.logger.warn(`Signup rejected: username already exists [${username}]`);
+      throw new ConflictException('Username already taken');
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await this.users.create({ email, passwordHash, role, gender });
+    const user = await this.users.create({ email, username, passwordHash, role, gender });
 
     this.logger.log(
-      `User created [userId=${maskUserId(user.id)}, email=${masked}, role=${role}, gender=${gender}]`,
+      `User created [userId=${maskUserId(user.id)}, email=${masked}, username=${username}, role=${role}, gender=${gender}]`,
     );
 
     return this.sign(user.id, user.email, user.role as 'TRADER' | 'ADMIN');
