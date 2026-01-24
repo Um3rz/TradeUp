@@ -10,11 +10,12 @@ This file provides context for AI assistants (like Claude Code) working on the T
 
 ### Current Status
 - **Phase 1**: ✅ Complete (Auth, Watchlist, Real-time data, Charts)
-- **Phase 2**: 🚧 Planned (Trading system: Buy/Sell functionality)
+- **Phase 2**: ✅ Complete (Trading system: Buy/Sell functionality, Portfolio, Transactions)
+- **Additional Features**: ✅ Complete (Market News, User Profile, Settings, Help Center)
 
 ### Tech Stack
-- **Backend**: NestJS + PostgreSQL (Prisma) + JWT Auth + WebSocket
-- **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS
+- **Backend**: NestJS 11 + PostgreSQL (Prisma 6) + JWT Auth + WebSocket
+- **Frontend**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4
 - **Real-time**: Socket.IO + PSX Terminal API WebSocket
 - **Charts**: lightweight-charts
 
@@ -103,6 +104,8 @@ backend/src/
 ├── users/          # User management
 ├── stocks/         # Stock data (PSX API integration)
 ├── watchlist/      # Watchlist management
+├── trades/         # Trading system (Buy/Sell, Portfolio, Transactions)
+├── news/           # News integration (Financial Modeling Prep, MarketAux)
 ├── ws/             # WebSocket gateway (real-time)
 ├── prisma/         # Database ORM
 ├── common/         # Constants, utilities
@@ -115,6 +118,12 @@ frontend/
 ├── app/
 │   ├── page.tsx           # Auth page (/)
 │   ├── dashboard/         # Dashboard (/dashboard)
+│   ├── buy/               # Buy Stocks page (/buy)
+│   ├── portfolio/         # Portfolio page (/portfolio)
+│   ├── news/              # Market News (/news)
+│   ├── profile/           # User Profile (/profile)
+│   ├── settings/          # User Settings (/settings)
+│   ├── help/              # Help Center & FAQ (/help)
 │   └── charts/            # Charts (/charts)
 ├── components/
 │   ├── ui/                # Shadcn UI components
@@ -126,16 +135,14 @@ frontend/
 
 ## Database Schema (Prisma)
 
-### Current Models (Phase 1)
-- **User**: id, email, passwordHash, role, createdAt
-- **Stock**: id, symbol, name, marketType, createdAt
+### Current Models
+- **User**: id, email, passwordHash, role, createdAt, balance (Decimal), portfolio[], transactions[]
+- **Stock**: id, symbol, name, marketType, createdAt, portfolio[], transactions[]
 - **WatchlistItem**: id, userId, stockId, createdAt (junction table)
+- **Portfolio**: id, userId, stockId, quantity, avgPrice, createdAt
+- **Transaction**: id, userId, stockId, type (BUY/SELL), quantity, price, total, createdAt
 - **Role Enum**: TRADER, ADMIN
-
-### Planned Models (Phase 2)
-- **Portfolio**: userId, stockId, quantity, avgPrice
-- **Transaction**: userId, stockId, type (BUY/SELL), quantity, price, total
-- **User.balance**: Virtual balance for trading
+- **TransactionType Enum**: BUY, SELL
 
 ---
 
@@ -241,6 +248,9 @@ import { Injectable } from '@nestjs/common';
 - `POST /auth/signup` - Register new user
 - `POST /auth/login` - Login user
 
+### Users (Auth Required)
+- `POST /users/profile-picture` - Upload profile image
+
 ### Stocks (No Auth Required)
 - `GET /stocks/featured` - Get featured stocks with prices
 - `GET /stocks/:symbol` - Get single stock price
@@ -250,34 +260,20 @@ import { Injectable } from '@nestjs/common';
 - `POST /watchlist` - Add stock to watchlist
 - `DELETE /watchlist/:symbol` - Remove from watchlist
 
+### Trades (Auth Required)
+- `GET /trades/portfolio` - Get user's portfolio holdings and balance
+- `GET /trades/transactions` - Get user's transaction history
+- `POST /trades/buy` - Buy stock (deducts balance, updates portfolio)
+- `POST /trades/sell` - Sell stock (credits balance, updates portfolio)
+
+### News (No Auth Required)
+- `GET /news/latest` - Get general market news
+- `POST /news/stock` - Get specific stock news
+
 ### WebSocket (Socket.IO)
 - **Namespace**: `/ws`
 - **Client → Server**: `subscribeSymbol(symbol)`
 - **Server → Client**: `tickUpdate(data)`, `subscribed(data)`
-
----
-
-## Phase 2 Roadmap (Trading System)
-
-### Planned Features
-1. **Buy/Sell Stock Endpoints**
-   - `POST /trades/buy` - Buy stock (deduct balance, add to portfolio)
-   - `POST /trades/sell` - Sell stock (add balance, reduce portfolio)
-
-2. **Portfolio Management**
-   - `GET /portfolio` - Get user's holdings with P&L
-   - `GET /transactions` - Get transaction history
-
-3. **Database Changes**
-   - Add `User.balance` field (default: 1000000)
-   - Create `Portfolio` model (userId, stockId, quantity, avgPrice)
-   - Create `Transaction` model (type: BUY/SELL, quantity, price)
-
-### Implementation Notes
-- Use **Prisma transactions** for buy/sell operations
-- Calculate P&L on-the-fly: `(currentPrice - avgPrice) * quantity`
-- Validate sufficient balance before buying
-- Validate sufficient quantity before selling
 
 ---
 
@@ -288,7 +284,15 @@ import { Injectable } from '@nestjs/common';
 - **WebSocket**: `wss://psxterminal.com/`
 - **Documentation**: https://github.com/mumtazkahn/psx-terminal/blob/main/API.md
 
-### Featured Symbols (Phase 1)
+### Financial Modeling Prep
+- **Purpose**: General market news
+- **Base URL**: `https://financialmodelingprep.com/stable`
+
+### MarketAux
+- **Purpose**: Stock-specific news
+- **Base URL**: `https://api.marketaux.com/v1`
+
+### Featured Symbols
 - HBL (Habib Bank Limited)
 - UBL (United Bank Limited)
 - MCB (MCB Bank Limited)
@@ -308,6 +312,8 @@ import { Injectable } from '@nestjs/common';
 DATABASE_URL="<postgres-connection-string>"
 JWT_SECRET="<jwt-secret>"
 PORT=3001
+NEWS_API_KEY="<fmp-api-key>"
+STOCK_API_KEY="<marketaux-api-key>"
 ```
 
 ### Frontend (.env.local)
@@ -355,7 +361,7 @@ npm run lint               # Check code quality
 
 1. **Lazy load components** - Dynamic imports when appropriate
 2. **Optimize database queries** - Avoid N+1 queries, use indexes
-3. **Use pagination** - Don't load all records at once
+3. **Use pagination** - Don't load all records at once (implemented in transactions)
 4. **WebSocket for real-time** - More efficient than polling
 5. **Minimize bundle size** - Tree shaking, code splitting
 
@@ -411,12 +417,20 @@ chore: update dependencies
 - Constants: `backend/src/common/constants.ts`
 - Auth Service: `backend/src/auth/auth.service.ts`
 - Stocks Service: `backend/src/stocks/stocks.service.ts`
+- Trades Service: `backend/src/trades/trades.service.ts`
+- News Service: `backend/src/news/news.controller.ts`
 - WebSocket Gateway: `backend/src/ws/market.gateway.ts`
 - Bootstrap: `backend/src/main.ts`
 
 ### Key Frontend Files
 - Auth Page: `frontend/app/page.tsx`
 - Dashboard: `frontend/app/dashboard/page.tsx`
+- Buy Page: `frontend/app/buy/page.tsx`
+- Portfolio Page: `frontend/app/portfolio/page.tsx`
+- News Page: `frontend/app/news/page.tsx`
+- Profile Page: `frontend/app/profile/page.tsx`
+- Help Page: `frontend/app/help/page.tsx`
+- Settings Page: `frontend/app/settings/layout.tsx`
 - Charts: `frontend/app/charts/page.tsx`
 - UI Components: `frontend/components/ui/`
 - Utilities: `frontend/lib/utils.ts`
@@ -527,8 +541,8 @@ npx tsc --noEmit         # Double-check TypeScript compilation
 
 ---
 
-**Last Updated**: 2025-11-06
+**Last Updated**: 2026-01-23
 
-**Phase**: 1 Complete, Phase 2 Planned
+**Phase**: Phase 1 & 2 Complete + Extras
 
 **Maintainer**: TradeUp Development Team

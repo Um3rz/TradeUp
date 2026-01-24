@@ -19,7 +19,13 @@ interface TickUpdateMessage {
 @WebSocketGateway({
   namespace: '/ws',
   cors: {
-    origin: ['http://localhost:3000', 'https://p04-trade-up.vercel.app'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'https://p04-trade-up.vercel.app',
+      'https://p04-trade-up1.vercel.app',
+    ],
     credentials: true,
     methods: ['GET', 'POST'],
   },

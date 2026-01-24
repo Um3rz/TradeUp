@@ -6,6 +6,7 @@ export interface User {
   email: string;
   name: string | null;
   role: string;
+  gender?: 'MALE' | 'FEMALE' | null;
   /** Balance as string or number (Prisma returns Decimal as string) */
   balance: string | number;
   profileImageUrl?: string | null;

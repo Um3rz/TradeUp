@@ -93,8 +93,30 @@ export class UsersService {
     email: string;
     passwordHash: string;
     role?: 'TRADER' | 'ADMIN';
+    gender?: 'MALE' | 'FEMALE';
   }) {
     return this.prisma.user.create({ data });
+  }
+
+  async ensureDefaultProfileImage(userId: number): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { profileImageUrl: true, gender: true },
+    });
+
+    if (!user || user.profileImageUrl || !user.gender) {
+      return;
+    }
+
+    const defaultAvatarUrl =
+      user.gender === 'MALE'
+        ? '/avatars/default-male.svg'
+        : '/avatars/default-female.svg';
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { profileImageUrl: defaultAvatarUrl },
+    });
   }
 
   async updateEmail(userId: number, newEmail: string) {
