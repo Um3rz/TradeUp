@@ -25,13 +25,19 @@ const NAV_LINKS = [
 ];
 
 export function TopBar() {
-  const { user } = useUser();
+  const { user, refreshUser } = useUser();
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("access_token");
+    }
+    // Clear user state in context so stale data doesn't persist
+    try {
+      await refreshUser();
+    } catch {
+      // Expected to fail (no token) - user state will be cleared
     }
     router.push("/");
   };
@@ -105,13 +111,13 @@ export function TopBar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/settings" className="cursor-pointer">
+                <Link href="/profile" className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/settings" className="cursor-pointer">
+                <Link href="/settings/account" className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>

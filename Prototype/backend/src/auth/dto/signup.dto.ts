@@ -17,4 +17,7 @@ export class SignupDto {
   @IsOptional()
   @IsIn(['TRADER', 'ADMIN'])
   role?: 'TRADER' | 'ADMIN';
+
+  @IsIn(['MALE', 'FEMALE'])
+  gender!: 'MALE' | 'FEMALE';
 }
