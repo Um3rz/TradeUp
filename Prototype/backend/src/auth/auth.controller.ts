@@ -14,7 +14,7 @@ function maskEmail(email: string): string {
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly auth: AuthService) {}
+  constructor(private readonly auth: AuthService) { }
 
   @Post('signup')
   async signup(@Body() dto: SignupDto) {
@@ -28,6 +28,7 @@ export class AuthController {
     try {
       const result = await this.auth.signup(
         dto.email,
+        dto.username,
         dto.password,
         dto.role ?? 'TRADER',
         dto.gender,

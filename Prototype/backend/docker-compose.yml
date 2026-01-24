@@ -40,9 +40,10 @@ services:
       db:
         condition: service_healthy
     # For development: mount source for hot reload (optional)
-    # volumes:
-    #   - .:/app
-    #   - /app/node_modules
+    # For development: mount source for hot reload (optional)
+    volumes:
+      - .:/app
+      - /app/node_modules
 
 volumes:
   tradeup_db:

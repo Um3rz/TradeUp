@@ -8,6 +8,8 @@ import {
   Post,
   UseInterceptors,
   UploadedFile,
+  Param,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -16,7 +18,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UsersService } from './users.service';
 import { FundWalletDto } from './dto/fund-wallet.dto';
 import * as bcrypt from 'bcrypt';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 
 interface AuthenticatedRequest {
@@ -76,7 +78,7 @@ export class UsersController {
     );
     return { imageUrl };
   }
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
@@ -251,9 +253,24 @@ export class UsersController {
     return this.usersService.updateBalance({ userId, amount });
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/public-profile')
+  async getPublicProfile(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.usersService.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      profileImageUrl: user.profileImageUrl,
+    };
+  }
+
   @Get('test')
   test() {
     return { message: 'Users controller is working!' };
   }
-  
+
 }

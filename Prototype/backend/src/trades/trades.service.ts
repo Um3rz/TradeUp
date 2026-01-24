@@ -2,18 +2,21 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StocksService } from '../stocks/stocks.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { Portfolio } from '@prisma/client';
+import { FriendsService } from '../friends/friends.service';
 
 @Injectable()
 export class TradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stocks: StocksService,
-  ) {}
+    private readonly friendsService: FriendsService,
+  ) { }
 
   async buyStock(userId: number, symbol: string, quantity: number) {
     const tick = await this.stocks.getTick(symbol);
@@ -234,6 +237,71 @@ export class TradesService {
       totalPnlPercentage: totalPnlPercentage,
       totalAccountValue: totalAccountValue,
       portfolio: portfolioWithPnl,
+    };
+  }
+
+  async getFriendPortfolio(requesterId: number, targetUserId: number) {
+    // 1. Check friendship
+    if (requesterId !== targetUserId) {
+      const areFriends = await this.friendsService.areFriends(
+        requesterId,
+        targetUserId,
+      );
+      if (!areFriends) {
+        throw new ForbiddenException(
+          'You are not allowed to view this portfolio',
+        );
+      }
+    }
+
+    // 2. Get portfolio data (reusing getPortfolio logic partially or calling it)
+    // Calling getPortfolio is easiest but might be slightly inefficient. 
+    // Optimization not critical for prototype.
+    const fullPortfolio = await this.getPortfolio(targetUserId);
+
+    // 3. Get extra stats
+    const totalTrades = await this.prisma.transaction.count({
+      where: { userId: targetUserId },
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { createdAt: true },
+    });
+
+    // Find top performer
+    let topPerformer: { symbol: string; pnlPercentage: Decimal } | null = null;
+    if (fullPortfolio.portfolio.length > 0) {
+      const sorted = [...fullPortfolio.portfolio].sort((a, b) =>
+        b.pnlPercentage.sub(a.pnlPercentage).toNumber()
+      );
+      const top = sorted[0];
+      topPerformer = {
+        symbol: top.symbol,
+        pnlPercentage: top.pnlPercentage
+      };
+    }
+
+    // 4. Construct privacy-safe response
+    return {
+      totalPortfolioValue: fullPortfolio.totalPortfolioValue,
+      totalUnrealizedPnl: fullPortfolio.totalUnrealizedPnl,
+      totalPnlPercentage: fullPortfolio.totalPnlPercentage,
+      portfolio: fullPortfolio.portfolio.map(p => ({
+        symbol: p.symbol,
+        name: p.name,
+        quantity: p.quantity,
+        avgPrice: p.avgPrice,
+        currentPrice: p.currentPrice,
+        unrealizedPnl: p.unrealizedPnl,
+        pnlPercentage: p.pnlPercentage
+      })),
+      stats: {
+        totalTrades,
+        memberSince: user?.createdAt,
+        portfolioDiversity: fullPortfolio.portfolio.length,
+        topPerformer
+      }
     };
   }
 

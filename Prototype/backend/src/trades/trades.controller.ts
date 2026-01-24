@@ -7,6 +7,7 @@ import {
   Get,
   Query,
   ParseIntPipe,
+  Param,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { BuyStockDto } from './dto/buy-stock.dto';
@@ -23,7 +24,7 @@ interface AuthenticatedRequest {
 
 @Controller('trades')
 export class TradesController {
-  constructor(private readonly tradesService: TradesService) {}
+  constructor(private readonly tradesService: TradesService) { }
 
   @UseGuards(JwtAuthGuard)
   @Get('portfolio')
@@ -31,6 +32,15 @@ export class TradesController {
     const userId = req.user.userId;
     console.log('Portfolio endpoint called with userId:', userId);
     return this.tradesService.getPortfolio(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('portfolio/:userId')
+  async getFriendPortfolio(
+    @Request() req: AuthenticatedRequest,
+    @Param('userId', ParseIntPipe) targetUserId: number,
+  ) {
+    return this.tradesService.getFriendPortfolio(req.user.userId, targetUserId);
   }
 
   @UseGuards(JwtAuthGuard)
