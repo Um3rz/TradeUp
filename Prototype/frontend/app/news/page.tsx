@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Search, ExternalLink } from "lucide-react";
+import { Search, ExternalLink, Brain } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { PageHeader, EmptyState } from "@/components/common";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { http, ApiException } from "@/lib/http";
 import { formatDate } from "@/lib/format";
+import { toast } from "sonner";
 
 interface NewsArticle {
   title: string;
@@ -28,6 +29,14 @@ interface StockNewsArticle {
   published_at: string;
 }
 
+interface SentimentAnalysisResponse {
+  title: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  confidence: number;
+  reasoning: string;
+  keywords: string[];
+}
+
 export default function NewsPage() {
   const [generalArticles, setGeneralArticles] = useState<NewsArticle[]>([]);
   const [stockArticles, setStockArticles] = useState<StockNewsArticle[]>([]);
@@ -37,6 +46,51 @@ export default function NewsPage() {
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [analyzingArticles, setAnalyzingArticles] = useState<Set<string>>(new Set());
+
+  const handleSentimentAnalysis = async (articleTitle: string, e: React.MouseEvent): Promise<void> => {
+    e.preventDefault(); // Prevent link navigation
+    e.stopPropagation(); // Prevent event bubbling
+    
+    // Add this article to the analyzing set
+    setAnalyzingArticles(prev => new Set(prev).add(articleTitle));
+    
+    try {
+      // Send the news title to backend for sentiment analysis
+      const response = await http.post<SentimentAnalysisResponse>('/news/sentiment-analysis', {
+        title: articleTitle
+      });
+      
+      // Display the sentiment analysis results
+      const sentimentEmoji = {
+        positive: '😊',
+        negative: '😟',
+        neutral: '😐'
+      }[response.sentiment];
+      
+      // Show success toast with results
+      toast.success(
+        `${sentimentEmoji} Sentiment: ${response.sentiment.toUpperCase()}`,
+        {
+          description: `${response.reasoning}\nKeywords: ${response.keywords.join(', ')}`,
+          duration: 8000,
+        }
+      );
+      
+    } catch (err) {
+      console.error('Sentiment analysis failed:', err);
+      toast.error('Failed to analyze sentiment', {
+        description: 'Please try again later.',
+      });
+    } finally {
+      // Remove this article from the analyzing set
+      setAnalyzingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleTitle);
+        return newSet;
+      });
+    }
+  };
 
   const loadLatestNews = useCallback(async (): Promise<void> => {
     try {
@@ -195,7 +249,26 @@ export default function NewsPage() {
                               <span className="text-xs text-muted-foreground">
                                 {formatDate(article.published_at)}
                               </span>
-                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={(e: React.MouseEvent) => handleSentimentAnalysis(article.title, e)}
+                                  className="h-6 w-6 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all duration-200"
+                                  title="Analyze sentiment"
+                                  disabled={analyzingArticles.has(article.title)}
+                                >
+                                  {analyzingArticles.has(article.title) ? (
+                                    <div className="h-3 w-3 animate-spin rounded-full border border-emerald-500 border-t-transparent" />
+                                  ) : (
+                                    <Brain className="h-3 w-3" />
+                                  )}
+                                </Button>
+                                {analyzingArticles.has(article.title) && (
+                                  <span className="text-xs text-emerald-600 font-medium">Analyzing...</span>
+                                )}
+                                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -257,7 +330,26 @@ export default function NewsPage() {
                               <span className="text-xs text-muted-foreground">
                                 {formatDate(article.date)}
                               </span>
-                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={(e: React.MouseEvent) => handleSentimentAnalysis(article.title, e)}
+                                  className="h-6 w-6 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all duration-200"
+                                  title="Analyze sentiment"
+                                  disabled={analyzingArticles.has(article.title)}
+                                >
+                                  {analyzingArticles.has(article.title) ? (
+                                    <div className="h-3 w-3 animate-spin rounded-full border border-emerald-500 border-t-transparent" />
+                                  ) : (
+                                    <Brain className="h-3 w-3" />
+                                  )}
+                                </Button>
+                                {analyzingArticles.has(article.title) && (
+                                  <span className="text-xs text-emerald-600 font-medium">Analyzing...</span>
+                                )}
+                                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                              </div>
                             </div>
                           </div>
                         </div>

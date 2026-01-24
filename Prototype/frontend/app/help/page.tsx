@@ -56,8 +56,8 @@ const FAQ_DATA: FAQItem[] = [
   },
   {
     category: "Settings",
-    question: "How do I update my profile?",
-    answer: createLinkText("Update name, email, and profile picture.", "/settings", "Settings")
+    question: "How do I update my account?",
+    answer: createLinkText("Update your name, email, password, and theme preferences in", "/settings/account", "Settings") + " Profile picture can be changed on the <a href='/profile' class='text-primary hover:underline'>Profile</a> page."
   }
 ];
 

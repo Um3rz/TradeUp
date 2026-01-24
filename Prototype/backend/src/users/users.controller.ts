@@ -36,6 +36,7 @@ type UploadedFileType = {
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
+
   @UseGuards(JwtAuthGuard)
   @Post('profile-picture')
   @UseInterceptors(FileInterceptor('file'))
@@ -103,11 +104,6 @@ export class UsersController {
     const { passwordHash, ...userProfile } = user;
     void passwordHash;
     return userProfile;
-  }
-
-  @Get('test')
-  test() {
-    return { message: 'Users controller is working!' };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -254,4 +250,10 @@ export class UsersController {
 
     return this.usersService.updateBalance({ userId, amount });
   }
+
+  @Get('test')
+  test() {
+    return { message: 'Users controller is working!' };
+  }
+  
 }

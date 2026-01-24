@@ -1,0 +1,93 @@
+'use client';
+
+import { useRef } from "react";
+import { toast } from "sonner";
+import { Camera } from "lucide-react";
+import { AppShell } from "@/components/layout";
+import { PageHeader } from "@/components/common";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { uploadFile, ApiException } from "@/lib/http";
+import { useUser } from "@/context/UserContext";
+
+export default function Profile() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user, refreshUser } = useUser();
+
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      try {
+        await uploadFile('/users/profile-picture', file, 'file');
+        await refreshUser();
+        toast.success("Profile picture updated");
+      } catch (error) {
+        const message = error instanceof ApiException ? error.message : "Failed to upload profile image";
+        toast.error(message);
+      }
+    }
+  };
+
+  const getInitials = (name?: string | null, email?: string | null) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  return (
+    <AppShell>
+      <PageHeader 
+        title="Profile" 
+        description="View your profile information"
+      />
+
+      <div className="flex justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <Avatar className="h-24 w-24">
+                {user?.profileImageUrl ? (
+                  <AvatarImage src={user.profileImageUrl} alt={user.name || "User"} />
+                ) : null}
+                <AvatarFallback className="text-2xl">
+                  {getInitials(user?.name, user?.email)}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                size="icon"
+                variant="secondary"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                onClick={handleButtonClick}
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-semibold">{user?.name || 'User'}</h3>
+              <p className="text-sm text-muted-foreground">{user?.email || ''}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AppShell>
+  );
+}

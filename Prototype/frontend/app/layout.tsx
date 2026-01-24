@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
@@ -25,11 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
-        {/* UserProvider makes user state available everywhere */}
-        <UserProvider>{children}</UserProvider>
-        <Toaster />
+        <ThemeProvider>
+          {/* UserProvider makes user state available everywhere */}
+          <UserProvider>{children}</UserProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

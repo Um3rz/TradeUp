@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id           Int             @id @default(autoincrement())
-  email        String          @unique
-  passwordHash String
-  role         Role            @default(TRADER)
-  createdAt    DateTime        @default(now())
-  balance      Decimal         @default(-1)
-  name         String?
+  id              Int             @id @default(autoincrement())
+  email           String          @unique
+  passwordHash    String
+  role            Role            @default(TRADER)
+  gender          Gender?
+  createdAt       DateTime        @default(now())
+  balance         Decimal         @default(-1)
+  name            String?
   profileImageUrl String?
   portfolio       Portfolio[]
   transactions    Transaction[]
@@ -72,6 +73,11 @@ model Transaction {
 enum Role {
   TRADER
   ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
 }
 
 enum TransactionType {
