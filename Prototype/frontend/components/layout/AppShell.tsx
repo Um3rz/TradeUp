@@ -23,31 +23,32 @@ interface AppShellProps {
  * - Optional auth protection
  * - Loading state handling
  */
-export function AppShell({ 
-  children, 
+export function AppShell({
+  children,
   requireAuth = true,
   className,
   fullWidth = false,
 }: AppShellProps) {
   const router = useRouter();
   const { user, isLoading } = useUser();
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(!requireAuth);
 
   // Session check
   useEffect(() => {
     if (!requireAuth) {
-      setSessionChecked(true);
       return;
     }
 
-    const token = typeof window !== "undefined" 
-      ? localStorage.getItem("access_token") 
+    const token = typeof window !== "undefined"
+      ? localStorage.getItem("access_token")
       : null;
-    
+
     if (!token) {
       router.replace("/");
     } else {
-      setSessionChecked(true);
+      // Avoid synchronous state update warning
+      const timer = setTimeout(() => setSessionChecked(true), 0);
+      return () => clearTimeout(timer);
     }
   }, [router, requireAuth]);
 
@@ -71,7 +72,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
-      <main 
+      <main
         className={cn(
           fullWidth ? "px-6 py-6" : "max-w-7xl mx-auto px-6 py-6",
           className

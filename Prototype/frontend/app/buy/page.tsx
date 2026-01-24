@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { PageHeader } from "@/components/common";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { http, ApiException } from "@/lib/http";
@@ -79,12 +79,12 @@ export default function BuyPage() {
 
     try {
       setIsSubmitting(true);
-      
+
       await http.post("/trades/buy", {
         symbol: selectedStock.symbol,
         quantity: quantity,
       });
-      
+
       toast.success(`Successfully bought ${quantity} shares of ${selectedStock.symbol}!`);
       closeBuyPanel();
     } catch (err) {
@@ -116,8 +116,8 @@ export default function BuyPage() {
   return (
     <AppShell fullWidth>
       <div className="max-w-7xl mx-auto px-6">
-        <PageHeader 
-          title="Trade" 
+        <PageHeader
+          title="Trade"
           description="Buy stocks from the Pakistan Stock Exchange"
         />
       </div>
@@ -126,7 +126,7 @@ export default function BuyPage() {
         {/* Left Side - Stock List (70%) */}
         <div className="w-[70%] p-6 overflow-y-auto">
           <h2 className="text-xl font-semibold mb-4">Available Stocks</h2>
-          
+
           {loading ? (
             <div className="space-y-4">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -173,7 +173,7 @@ export default function BuyPage() {
         </div>
 
         {/* Right Side - Buy Panel (30%) */}
-        <div 
+        <div
           className={cn(
             "w-[30%] bg-card border-l border-border transition-transform duration-300 ease-in-out h-full",
             showBuyPanel ? "transform translate-x-0" : "transform translate-x-full"
@@ -202,7 +202,7 @@ export default function BuyPage() {
                     <p className="text-3xl font-bold">PKR {formatDecimal(getPrice(selectedStock.tick))}</p>
                     <p className={cn("text-sm", getPnLClass(getChange(selectedStock.tick).change))}>
                       {getChange(selectedStock.tick).change >= 0 ? "+" : ""}
-                      {formatDecimal(getChange(selectedStock.tick).change)} 
+                      {formatDecimal(getChange(selectedStock.tick).change)}
                       ({formatDecimal(getChange(selectedStock.tick).changePercent)}%)
                     </p>
                   </CardContent>

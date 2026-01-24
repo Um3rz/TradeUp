@@ -1,4 +1,10 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 
 /**
@@ -9,26 +15,26 @@ function normalizeMessage(response: unknown): string {
   if (typeof response === 'string') {
     return response;
   }
-  
+
   if (response && typeof response === 'object') {
     const obj = response as Record<string, unknown>;
-    
+
     // Handle Nest validation pipe errors (array of messages)
     if (Array.isArray(obj.message)) {
       return obj.message.join(' • ');
     }
-    
+
     // Handle standard HttpException response
     if (typeof obj.message === 'string') {
       return obj.message;
     }
-    
+
     // Handle error property
     if (typeof obj.error === 'string') {
       return obj.error;
     }
   }
-  
+
   return 'An unexpected error occurred';
 }
 
@@ -47,18 +53,27 @@ export class CorsExceptionFilter implements ExceptionFilter {
     // Allow both development and production origins
     const allowedOrigins = [
       'http://localhost:3000',
-      'https://p04-trade-up.vercel.app'
+      'https://p04-trade-up.vercel.app',
     ];
     const requestOrigin = request.headers.origin;
-    
+
     if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
       response.header('Access-Control-Allow-Origin', requestOrigin);
     } else {
-      response.header('Access-Control-Allow-Origin', 'https://p04-trade-up.vercel.app');
+      response.header(
+        'Access-Control-Allow-Origin',
+        'https://p04-trade-up.vercel.app',
+      );
     }
-    
-    response.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    response.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
+
+    response.header(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+    );
+    response.header(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization, Accept, X-Requested-With',
+    );
     response.header('Access-Control-Allow-Credentials', 'true');
 
     const status =
@@ -67,9 +82,8 @@ export class CorsExceptionFilter implements ExceptionFilter {
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
     // Get the raw exception response
-    const exceptionResponse = exception instanceof HttpException 
-      ? exception.getResponse() 
-      : null;
+    const exceptionResponse =
+      exception instanceof HttpException ? exception.getResponse() : null;
 
     // Always return a normalized error response with string message
     response.status(status).json({
@@ -78,9 +92,10 @@ export class CorsExceptionFilter implements ExceptionFilter {
       path: request.url,
       message: normalizeMessage(exceptionResponse),
       // Include raw details for debugging (frontend can optionally use this)
-      details: exceptionResponse !== null && typeof exceptionResponse === 'object' 
-        ? exceptionResponse 
-        : undefined,
+      details:
+        exceptionResponse !== null && typeof exceptionResponse === 'object'
+          ? exceptionResponse
+          : undefined,
     });
   }
 }

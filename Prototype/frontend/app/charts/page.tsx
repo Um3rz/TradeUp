@@ -300,7 +300,7 @@ export default function Charts() {
         chartRef.current = null;
       }
     };
-  }, []);
+  }, [initializeChart]);
 
   useEffect(() => {
     setCurrentCandle(null);

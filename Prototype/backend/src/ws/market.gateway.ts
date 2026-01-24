@@ -68,7 +68,6 @@ export class MarketGateway implements OnModuleInit {
       }
     });
 
-
     // Fix: Type 'data' as unknown and safely narrow types instead of using 'any'
     ws.on('message', (data: unknown) => {
       try {
