@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { uploadFile, ApiException } from "@/lib/http";
 import { useUser } from "@/context/UserContext";
+import { FriendsSection } from "@/components/profile/FriendsSection";
 
 export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,15 +46,16 @@ export default function Profile() {
 
   return (
     <AppShell>
-      <PageHeader 
-        title="Profile" 
-        description="View your profile information"
+      <PageHeader
+        title="Profile"
+        description="View your profile and manage friends"
       />
 
-      <div className="flex justify-center">
-        <Card className="w-full max-w-md">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Profile Card */}
+        <Card className="h-fit">
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle>My Profile</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <div className="relative">
@@ -81,13 +83,20 @@ export default function Profile() {
                 onChange={handleFileChange}
               />
             </div>
-            <div className="text-center">
+            <div className="text-center space-y-1">
               <h3 className="text-xl font-semibold">{user?.name || 'User'}</h3>
+              {user?.username && (
+                <p className="text-sm text-muted-foreground">@{user.username}</p>
+              )}
               <p className="text-sm text-muted-foreground">{user?.email || ''}</p>
             </div>
           </CardContent>
         </Card>
+
+        {/* Friends Section */}
+        <FriendsSection />
       </div>
     </AppShell>
   );
 }
+
