@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { LogOut, Settings, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getFriendRequests } from "@/lib/friendsService";
 
 const NAV_LINKS = [
   { href: "/portfolio", label: "Portfolio" },
@@ -28,6 +30,7 @@ export function TopBar() {
   const { user, refreshUser } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const [hasRequests, setHasRequests] = useState(false);
 
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {
@@ -52,13 +55,30 @@ export function TopBar() {
     return 'U';
   };
 
+  // Poll for friend requests
+  useEffect(() => {
+    const checkRequests = async () => {
+      try {
+        const requests = await getFriendRequests();
+        setHasRequests(requests.length > 0);
+      } catch {
+        // Silently fail - user might not be authenticated yet
+      }
+    };
+
+    checkRequests();
+    const interval = setInterval(checkRequests, 30000); // Poll every 30s
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link 
-            href="/dashboard" 
+          <Link
+            href="/dashboard"
             className="text-2xl font-semibold text-foreground hover:text-primary transition-colors"
           >
             Trade Up
@@ -96,6 +116,9 @@ export function TopBar() {
                     {getInitials(user?.name, user?.email)}
                   </AvatarFallback>
                 </Avatar>
+                {hasRequests && (
+                  <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-background" />
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -123,7 +146,7 @@ export function TopBar() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={handleSignOut}
                 className="cursor-pointer text-destructive focus:text-destructive"
               >

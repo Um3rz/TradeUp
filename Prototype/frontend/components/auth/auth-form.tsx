@@ -13,6 +13,7 @@ import { useUser } from "@/context/UserContext";
 
 type AuthFormFields = {
   email: string;
+  username: string;
   password: string;
   confirm: string;
 };
@@ -60,8 +61,9 @@ export function AuthForm() {
     setIsLoading(true);
     try {
       const url = mode === "signin" ? "/auth/login" : "/auth/signup";
-      const body: { email: string; password: string; role?: string; gender?: string } = { email: data.email, password: data.password };
+      const body: { email: string; password: string; username?: string; role?: string; gender?: string } = { email: data.email, password: data.password };
       if (mode === "signup") {
+        body.username = data.username;
         body.role = role;
         body.gender = gender!;
       }
@@ -104,6 +106,7 @@ export function AuthForm() {
         setMode("signin");
         setValue("password", "");
         setValue("confirm", "");
+        setValue("username", "");
         setRole("TRADER");
         setGender(null);
       }
@@ -133,8 +136,8 @@ export function AuthForm() {
             onClick={() => setMode("signin")}
             aria-pressed={mode === "signin"}
             className={`cursor-pointer px-4 py-1.5 text-sm rounded-full transition-all ${mode === "signin"
-                ? "bg-white/10 shadow text-white"
-                : "text-gray-300 hover:text-white"
+              ? "bg-white/10 shadow text-white"
+              : "text-gray-300 hover:text-white"
               }`}
           >
             Sign in
@@ -143,8 +146,8 @@ export function AuthForm() {
             onClick={() => setMode("signup")}
             aria-pressed={mode === "signup"}
             className={`cursor-pointer px-4 py-1.5 text-sm rounded-full transition-all ${mode === "signup"
-                ? "bg-white/10 shadow text-white"
-                : "text-gray-300 hover:text-white"
+              ? "bg-white/10 shadow text-white"
+              : "text-gray-300 hover:text-white"
               }`}
           >
             Sign up
@@ -175,6 +178,39 @@ export function AuthForm() {
             </span>
           )}
         </div>
+
+        {mode === "signup" && (
+          <div>
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              autoComplete="username"
+              {...register("username", {
+                required: "Username is required",
+                minLength: {
+                  value: 3,
+                  message: "Username must be at least 3 characters",
+                },
+                maxLength: {
+                  value: 20,
+                  message: "Username must be at most 20 characters",
+                },
+                pattern: {
+                  value: /^[a-zA-Z0-9_]+$/,
+                  message: "Username can only contain letters, numbers, and underscores",
+                },
+              })}
+              placeholder="your_username"
+              className="bg-black/20 border-white/20 text-white placeholder:text-gray-400"
+            />
+            {errors.username && (
+              <span className="text-red-400 text-xs mt-1">
+                {errors.username.message}
+              </span>
+            )}
+          </div>
+        )}
 
         <div>
           <Label htmlFor="password">Password</Label>
@@ -288,8 +324,8 @@ export function AuthForm() {
                   onClick={() => setGender("MALE")}
                   aria-pressed={gender === "MALE"}
                   className={`px-3 py-1.5 rounded-xl text-xs border transition ${gender === "MALE"
-                      ? "bg-white/10 text-white border-white/20"
-                      : "bg-black/20 border-white/10 text-gray-300 hover:border-white/50 hover:text-white"
+                    ? "bg-white/10 text-white border-white/20"
+                    : "bg-black/20 border-white/10 text-gray-300 hover:border-white/50 hover:text-white"
                     }`}
                 >
                   Male
@@ -299,8 +335,8 @@ export function AuthForm() {
                   onClick={() => setGender("FEMALE")}
                   aria-pressed={gender === "FEMALE"}
                   className={`px-3 py-1.5 rounded-xl text-xs border transition ${gender === "FEMALE"
-                      ? "bg-white/10 text-white border-white/20"
-                      : "bg-black/20 border-white/10 text-gray-300 hover:border-white/50 hover:text-white"
+                    ? "bg-white/10 text-white border-white/20"
+                    : "bg-black/20 border-white/10 text-gray-300 hover:border-white/50 hover:text-white"
                     }`}
                 >
                   Female
@@ -323,8 +359,8 @@ export function AuthForm() {
           <div
             role={message.type === "error" ? "alert" : "status"}
             className={`text-sm rounded-xl px-3 py-2 border ${message.type === "error"
-                ? "bg-red-900/30 text-red-300 border-red-500/30"
-                : "bg-green-900/30 text-green-300 border-green-500/30"
+              ? "bg-red-900/30 text-red-300 border-red-500/30"
+              : "bg-green-900/30 text-green-300 border-green-500/30"
               }`}
           >
             {message.text}
