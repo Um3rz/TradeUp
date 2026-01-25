@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { Search, ExternalLink, Brain } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { PageHeader, EmptyState } from "@/components/common";
+import { NewsSkeletonLoader, NewsErrorCard, SentimentButton } from "@/components/news";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,23 +65,23 @@ export default function NewsPage() {
   const handleSentimentAnalysis = async (articleTitle: string, e: React.MouseEvent): Promise<void> => {
     e.preventDefault(); // Prevent link navigation
     e.stopPropagation(); // Prevent event bubbling
-    
+
     // Add this article to the analyzing set
     setAnalyzingArticles(prev => new Set(prev).add(articleTitle));
-    
+
     try {
       // Send the news title to backend for sentiment analysis
       const response = await http.post<SentimentAnalysisResponse>('/news/sentiment-analysis', {
         title: articleTitle
       });
-      
+
       // Display the sentiment analysis results
       const sentimentEmoji = {
         positive: '😊',
         negative: '😟',
         neutral: '😐'
       }[response.sentiment];
-      
+
       // Show success toast with results
       toast.success(
         `${sentimentEmoji} Sentiment: ${response.sentiment.toUpperCase()}`,
@@ -89,7 +90,7 @@ export default function NewsPage() {
           duration: 8000,
         }
       );
-      
+
     } catch (err) {
       console.error('Sentiment analysis failed:', err);
       toast.error('Failed to analyze sentiment', {
@@ -111,7 +112,7 @@ export default function NewsPage() {
       setError(null);
       setIsSearching(false);
       setStockArticles([]);
-      
+
       const newsArticles = await http.get<NewsArticle[]>("/news/latest", { noAuth: true });
       setGeneralArticles(Array.isArray(newsArticles) ? newsArticles : []);
     } catch (err) {
@@ -126,7 +127,7 @@ export default function NewsPage() {
     try {
       setLocalLoading(true);
       setError(null);
-      
+
       const localNewsArticles = await http.get<LocalNewsArticle[]>("/news/local", { noAuth: true });
       setLocalArticles(Array.isArray(localNewsArticles) ? localNewsArticles : []);
     } catch (err) {
@@ -148,14 +149,14 @@ export default function NewsPage() {
       setError(null);
       setIsSearching(true);
       setLastSearchedTicker(ticker.toUpperCase());
-      
+
       const searchedStockArticles = await http.post<StockNewsArticle[]>(
-        "/news/stock", 
+        "/news/stock",
         { ticker: ticker.toUpperCase() },
         { noAuth: true }
       );
       setStockArticles(Array.isArray(searchedStockArticles) ? searchedStockArticles : []);
-      
+
       const latestNews = await http.get<NewsArticle[]>("/news/latest", { noAuth: true });
       setGeneralArticles(Array.isArray(latestNews) ? latestNews : []);
     } catch (err) {
@@ -187,8 +188,8 @@ export default function NewsPage() {
 
   return (
     <AppShell>
-      <PageHeader 
-        title="Market News" 
+      <PageHeader
+        title="Market News"
         description="Stay updated with the latest financial news"
       />
 
@@ -196,21 +197,19 @@ export default function NewsPage() {
       <div className="flex gap-2 mb-6 border-b border-border">
         <button
           onClick={() => setActiveTab('global')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'global'
-              ? 'text-primary border-b-2 border-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+          className={`px-4 py-2 font-medium transition-colors ${activeTab === 'global'
+            ? 'text-primary border-b-2 border-primary'
+            : 'text-muted-foreground hover:text-foreground'
+            }`}
         >
           Global News
         </button>
         <button
           onClick={() => setActiveTab('local')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            activeTab === 'local'
-              ? 'text-primary border-b-2 border-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+          className={`px-4 py-2 font-medium transition-colors ${activeTab === 'local'
+            ? 'text-primary border-b-2 border-primary'
+            : 'text-muted-foreground hover:text-foreground'
+            }`}
         >
           Local News
         </button>
@@ -245,25 +244,12 @@ export default function NewsPage() {
             </div>
           )}
 
-          {loading && (
-            <div className="grid gap-6">
-              {Array.from({ length: 4 }, (_, i) => `skeleton-${i}`).map((key) => (
-                <div key={key} className="h-48 rounded-lg bg-muted animate-pulse" />
-              ))}
-            </div>
-          )}
-          
+          {loading && <NewsSkeletonLoader />}
+
           {!loading && error && (
-            <Card className="border-destructive bg-destructive/10">
-              <CardContent className="py-8 text-center">
-                <p className="text-destructive">{error}</p>
-                <Button variant="outline" className="mt-4" onClick={loadLatestNews}>
-                  Try Again
-                </Button>
-              </CardContent>
-            </Card>
+            <NewsErrorCard error={error} onRetry={loadLatestNews} />
           )}
-          
+
           {!loading && !error && (
             <div className="space-y-8">
               {/* Stock-specific News */}
@@ -315,23 +301,10 @@ export default function NewsPage() {
                                     {formatDate(article.published_at)}
                                   </span>
                                   <div className="flex items-center gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      onClick={(e: React.MouseEvent) => handleSentimentAnalysis(article.title, e)}
-                                      className="h-6 w-6 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all duration-200"
-                                      title="Analyze sentiment"
-                                      disabled={analyzingArticles.has(article.title)}
-                                    >
-                                      {analyzingArticles.has(article.title) ? (
-                                        <div className="h-3 w-3 animate-spin rounded-full border border-emerald-500 border-t-transparent" />
-                                      ) : (
-                                        <Brain className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                    {analyzingArticles.has(article.title) && (
-                                      <span className="text-xs text-emerald-600 font-medium">Analyzing...</span>
-                                    )}
+                                    <SentimentButton
+                                      isAnalyzing={analyzingArticles.has(article.title)}
+                                      onAnalyze={(e) => handleSentimentAnalysis(article.title, e)}
+                                    />
                                     <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                   </div>
                                 </div>
@@ -385,7 +358,7 @@ export default function NewsPage() {
                                     {article.title}
                                   </h3>
                                   {article.content && (
-                                    <div 
+                                    <div
                                       className="text-sm text-muted-foreground line-clamp-2"
                                       dangerouslySetInnerHTML={{ __html: article.content }}
                                     />
@@ -396,23 +369,10 @@ export default function NewsPage() {
                                     {formatDate(article.date)}
                                   </span>
                                   <div className="flex items-center gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      onClick={(e: React.MouseEvent) => handleSentimentAnalysis(article.title, e)}
-                                      className="h-6 w-6 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all duration-200"
-                                      title="Analyze sentiment"
-                                      disabled={analyzingArticles.has(article.title)}
-                                    >
-                                      {analyzingArticles.has(article.title) ? (
-                                        <div className="h-3 w-3 animate-spin rounded-full border border-emerald-500 border-t-transparent" />
-                                      ) : (
-                                        <Brain className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                    {analyzingArticles.has(article.title) && (
-                                      <span className="text-xs text-emerald-600 font-medium">Analyzing...</span>
-                                    )}
+                                    <SentimentButton
+                                      isAnalyzing={analyzingArticles.has(article.title)}
+                                      onAnalyze={(e) => handleSentimentAnalysis(article.title, e)}
+                                    />
                                     <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                   </div>
                                 </div>
@@ -433,29 +393,16 @@ export default function NewsPage() {
       {/* Local News Tab */}
       {activeTab === 'local' && (
         <>
-          {localLoading && (
-            <div className="grid gap-6">
-              {Array.from({ length: 4 }, (_, i) => `local-skeleton-${i}`).map((key) => (
-                <div key={key} className="h-48 rounded-lg bg-muted animate-pulse" />
-              ))}
-            </div>
-          )}
-          
+          {localLoading && <NewsSkeletonLoader />}
+
           {!localLoading && error && (
-            <Card className="border-destructive bg-destructive/10">
-              <CardContent className="py-8 text-center">
-                <p className="text-destructive">{error}</p>
-                <Button variant="outline" className="mt-4" onClick={loadLocalNews}>
-                  Try Again
-                </Button>
-              </CardContent>
-            </Card>
+            <NewsErrorCard error={error} onRetry={loadLocalNews} />
           )}
-          
+
           {!localLoading && !error && localArticles.length === 0 && (
             <EmptyState variant="news" />
           )}
-          
+
           {!localLoading && !error && localArticles.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -492,23 +439,10 @@ export default function NewsPage() {
                               {formatDate(article.pubDate)}
                             </span>
                             <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={(e: React.MouseEvent) => handleSentimentAnalysis(article.title, e)}
-                                className="h-6 w-6 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all duration-200"
-                                title="Analyze sentiment"
-                                disabled={analyzingArticles.has(article.title)}
-                              >
-                                {analyzingArticles.has(article.title) ? (
-                                  <div className="h-3 w-3 animate-spin rounded-full border border-emerald-500 border-t-transparent" />
-                                ) : (
-                                  <Brain className="h-3 w-3" />
-                                )}
-                              </Button>
-                              {analyzingArticles.has(article.title) && (
-                                <span className="text-xs text-emerald-600 font-medium">Analyzing...</span>
-                              )}
+                              <SentimentButton
+                                isAnalyzing={analyzingArticles.has(article.title)}
+                                onAnalyze={(e) => handleSentimentAnalysis(article.title, e)}
+                              />
                               <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
                           </div>
