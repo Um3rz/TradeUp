@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import Parser from 'rss-parser';
 
 export interface StockNewsEntityHighlight {
   highlight: string;
@@ -92,6 +93,16 @@ export interface SentimentAnalysisResponse {
   confidence: number;
   reasoning: string;
   keywords: string[];
+}
+
+export interface LocalNewsArticle {
+  title: string;
+  link: string;
+  pubDate: string;
+  content?: string;
+  contentSnippet?: string;
+  source: string;
+  category?: string;
 }
 
 @Controller('news')
@@ -236,8 +247,8 @@ export class NewsController {
       try {
         // Clean up the response (remove any markdown code blocks if present)
         const cleanedText = generatedText
-          .replace(/```json\n?/g, '')
-          .replace(/```\n?/g, '')
+          .replaceAll(/```json\n?/g, '')
+          .replaceAll(/```\n?/g, '')
           .trim();
 
         const parsedData = JSON.parse(cleanedText) as GeminiSentimentData;
@@ -269,6 +280,39 @@ export class NewsController {
 
       throw new HttpException(
         'Sentiment analysis service temporarily unavailable',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+  }
+
+  @Get('local')
+  async getLocalNews(): Promise<LocalNewsArticle[]> {
+    try {
+      const parser: Parser = new Parser({
+        customFields: {
+          item: ['category', 'description'],
+        },
+      });
+
+      // Fetch Dawn.com Business RSS feed
+      const feed = await parser.parseURL('https://www.dawn.com/feeds/business');
+
+      // Transform RSS items to our format
+      const articles: LocalNewsArticle[] = feed.items.map((item) => ({
+        title: item.title || 'Untitled',
+        link: item.link || '',
+        pubDate: item.pubDate || item.isoDate || new Date().toISOString(),
+        content: item.content || item.description || '',
+        contentSnippet: item.contentSnippet || '',
+        source: 'Dawn',
+        category: 'Business',
+      }));
+
+      return articles;
+    } catch (error) {
+      console.error('Failed to fetch local news RSS feed:', error);
+      throw new HttpException(
+        'Failed to fetch local news',
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
