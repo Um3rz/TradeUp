@@ -24,7 +24,6 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
@@ -36,6 +35,7 @@
     "@nestjs/throttler": "^6.4.0",
     "@nestjs/websockets": "^11.0.1",
     "@prisma/client": "^6.18.0",
+    "@supabase/supabase-js": "^2.45.0",
     "axios": "^1.7.7",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
@@ -45,6 +45,7 @@
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
+    "rss-parser": "^3.13.0",
     "rxjs": "^7.8.2",
     "ws": "^8.18.0"
   },
