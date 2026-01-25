@@ -2,7 +2,7 @@
 ALTER TABLE "User" ADD COLUMN "username" TEXT;
 
 -- Update existing users: derive username from email (part before @), append id to ensure uniqueness
-UPDATE "User" SET "username" = CONCAT(SPLIT_PART("email", '@', 1), '_', "id");
+UPDATE "User" SET "username" = CONCAT(SPLIT_PART("email", '@', 1), '_', "id") WHERE "username" IS NULL;
 
 -- Make username NOT NULL and UNIQUE
 ALTER TABLE "User" ALTER COLUMN "username" SET NOT NULL;
