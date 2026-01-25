@@ -213,12 +213,20 @@ export default function Charts() {
     }
 
     const socket: Socket = io(`${API_BASE_URL}/ws`, {
-      transports: ['websocket'],
       withCredentials: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      autoConnect: true,
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      console.log('Connected via:', socket.io.engine.transport.name); // 'polling' or 'websocket'
+
+      socket.io.engine.on("upgrade", () => {
+        console.log('Transport upgraded to:', socket.io.engine.transport.name); // 'websocket'
+      });
+
       setMarketStatus(prev => ({
         ...prev,
         isConnected: true,

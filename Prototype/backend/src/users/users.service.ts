@@ -13,7 +13,7 @@ const supabase = createClient(
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // Upload profile picture, save URL in DB, and return public URL
   async uploadProfilePicture(
@@ -85,16 +85,61 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
+  async findByUsername(username: string) {
+    return this.prisma.user.findUnique({ where: { username } });
+  }
+
+  async searchByUsername(query: string, limit = 10) {
+    return this.prisma.user.findMany({
+      where: {
+        username: {
+          contains: query,
+          mode: 'insensitive',
+        },
+      },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        profileImageUrl: true,
+      },
+      take: limit,
+    });
+  }
+
   async findById(id: number) {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
   async create(data: {
     email: string;
+    username: string;
     passwordHash: string;
     role?: 'TRADER' | 'ADMIN';
+    gender?: 'MALE' | 'FEMALE';
   }) {
     return this.prisma.user.create({ data });
+  }
+
+  async ensureDefaultProfileImage(userId: number): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { profileImageUrl: true, gender: true },
+    });
+
+    if (!user || user.profileImageUrl || !user.gender) {
+      return;
+    }
+
+    const defaultAvatarUrl =
+      user.gender === 'MALE'
+        ? '/avatars/default-male.svg'
+        : '/avatars/default-female.svg';
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { profileImageUrl: defaultAvatarUrl },
+    });
   }
 
   async updateEmail(userId: number, newEmail: string) {
@@ -139,6 +184,17 @@ export class UsersService {
   async emailExists(email: string, excludeUserId?: number) {
     const user = await this.prisma.user.findUnique({
       where: { email },
+      select: { id: true },
+    });
+
+    if (!user) return false;
+    if (excludeUserId && user.id === excludeUserId) return false;
+    return true;
+  }
+
+  async usernameExists(username: string, excludeUserId?: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
       select: { id: true },
     });
 

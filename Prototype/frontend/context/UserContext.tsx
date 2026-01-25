@@ -21,6 +21,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = useCallback(async (): Promise<User | null> => {
+    // Early exit if no token - avoids throwing error during signout
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    if (!token) {
+      setUser(null);
+      setIsLoading(false);
+      return null;
+    }
+
     setIsLoading(true);
     try {
       const profile = await getUserProfile();

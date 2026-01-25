@@ -4,8 +4,10 @@ import API_BASE_URL from './api';
 export interface User {
   id: number;
   email: string;
+  username: string;
   name: string | null;
   role: string;
+  gender?: 'MALE' | 'FEMALE' | null;
   /** Balance as string or number (Prisma returns Decimal as string) */
   balance: string | number;
   profileImageUrl?: string | null;
@@ -54,7 +56,7 @@ export const uploadProfileImage = async (file: File): Promise<string> => {
 
 export const getUserProfile = async (): Promise<User> => {
   const token = localStorage.getItem('access_token');
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }
@@ -81,7 +83,7 @@ export const getUserProfile = async (): Promise<User> => {
 
 export const updateUserEmail = async (newEmail: string, currentPassword: string) => {
   const token = localStorage.getItem('access_token');
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }
@@ -106,7 +108,7 @@ export const updateUserEmail = async (newEmail: string, currentPassword: string)
 
 export const updateUserPassword = async (currentPassword: string, newPassword: string) => {
   const token = localStorage.getItem('access_token');
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }
@@ -131,7 +133,7 @@ export const updateUserPassword = async (currentPassword: string, newPassword: s
 
 export const updateUserName = async (newName: string, currentPassword: string) => {
   const token = localStorage.getItem('access_token');
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }

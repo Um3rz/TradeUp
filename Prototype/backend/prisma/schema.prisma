@@ -8,17 +8,33 @@ datasource db {
 }
 
 model User {
-  id           Int             @id @default(autoincrement())
-  email        String          @unique
-  passwordHash String
-  role         Role            @default(TRADER)
-  createdAt    DateTime        @default(now())
-  balance      Decimal         @default(-1)
-  name         String?
-  profileImageUrl String?
-  portfolio       Portfolio[]
-  transactions    Transaction[]
-  watchlist       WatchlistItem[]
+  id                  Int             @id @default(autoincrement())
+  email               String          @unique
+  username            String          @unique
+  passwordHash        String
+  role                Role            @default(TRADER)
+  gender              Gender?
+  createdAt           DateTime        @default(now())
+  balance             Decimal         @default(-1)
+  name                String?
+  profileImageUrl     String?
+  portfolio           Portfolio[]
+  transactions        Transaction[]
+  watchlist           WatchlistItem[]
+  sentFriendships     Friendship[]    @relation("SentFriendships")
+  receivedFriendships Friendship[]    @relation("ReceivedFriendships")
+}
+
+model Friendship {
+  id         Int              @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  sender     User             @relation("SentFriendships", fields: [senderId], references: [id])
+  receiver   User             @relation("ReceivedFriendships", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
 }
 
 model Stock {
@@ -74,7 +90,19 @@ enum Role {
   ADMIN
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 enum TransactionType {
   BUY
   SELL
 }
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
